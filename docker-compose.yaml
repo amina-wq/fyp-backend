@@ -1,0 +1,7 @@
+services:
+ fyp-backend:
+      build: ./app
+      env_file:
+        - .env
+      ports:
+        - "80:80"
