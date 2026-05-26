@@ -1,0 +1,59 @@
+from datetime import date, datetime, timezone
+from enum import Enum
+from typing import Optional, Annotated
+from beanie import Document, Indexed, PydanticObjectId
+from pydantic import BaseModel, Field
+from src.core.enums import FoodCategory
+
+class StorageLocation(str, Enum):
+    FRIDGE = "fridge"
+    FREEZER = "freezer"
+    PANTRY = "pantry"
+    COUNTER ="counter"
+    OTHER = "other"
+
+
+class InventoryUnits(str, Enum):
+    PCS = "pcs"
+    G = "g"
+    KG = "kg"
+    ML = "ml"
+    L = "l"
+    PACK = "pack"
+    BOTTLE = "bottle"
+    CAN = "can"
+    OTHER = "other"
+
+class InventoryStatus(str, Enum):
+    ACTIVE = "active"
+    CONSUMED = "consumed"
+    EXPIRED = "expired"
+    WASTED = "wasted"
+    DELETED = "deleted"
+
+
+class ScheduledNotification(BaseModel):
+    days_before: int
+    scheduled_for: datetime
+    is_sent: bool = False
+    sent_at: Optional[datetime] = None
+
+
+class InventoryItem(Document):
+    user_id: Annotated[PydanticObjectId, Indexed()]
+    product_id: Optional[PydanticObjectId] = None
+    barcode: Optional[str] = None
+    custom_name: Optional[str] = None
+    category: FoodCategory = FoodCategory.OTHER
+    notes: Optional[str] = None
+    location: StorageLocation = StorageLocation.FRIDGE
+    opened_at: Optional[datetime] = None
+    amount: float = Field(default=1, gt=0)
+    unit: InventoryUnits = InventoryUnits.PCS
+    expiration_date: date
+    status: InventoryStatus = InventoryStatus.ACTIVE
+    added_at: datetime = Field(default_factory=datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=datetime.now(timezone.utc))
+
+    class Settings:
+        name = 'inventory_items'
