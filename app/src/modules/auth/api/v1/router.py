@@ -1,26 +1,26 @@
 from typing import Any
+
 from fastapi import APIRouter, Depends, status
-from src.modules.auth.dependencies import get_auth_service
-from src.modules.auth.dependencies import JWTBearer
-from src.modules.auth.services import AuthService
+from src.modules.auth.dependencies import JWTBearer, get_auth_service
 from src.modules.auth.schemas import (
+    TokenResponseSchema,
     UserLoginSchema,
     UserRegisterSchema,
-    TokenResponseSchema,
 )
+from src.modules.auth.services import AuthService
 
 router = APIRouter()
 
 jwt_bearer = JWTBearer(auto_error=False)
 
 
-@router.get("/protected")
+@router.get('/protected')
 async def protected_route(
     jwt_data: dict[str, Any] = Depends(jwt_bearer),
 ):
     return {
-        "message": "You have access",
-        "jwt_data": jwt_data,
+        'message': 'You have access',
+        'jwt_data': jwt_data,
     }
 
 
@@ -30,10 +30,11 @@ async def protected_route(
     status_code=status.HTTP_201_CREATED,
 )
 async def register_user(
-        data: UserRegisterSchema,
-        auth_service: AuthService = Depends(get_auth_service),
+    data: UserRegisterSchema,
+    auth_service: AuthService = Depends(get_auth_service),
 ) -> TokenResponseSchema:
     return await auth_service.register_user(data)
+
 
 @router.post(
     '/login',
@@ -41,7 +42,7 @@ async def register_user(
     status_code=status.HTTP_200_OK,
 )
 async def login_user(
-        data: UserLoginSchema,
-        auth_service: AuthService = Depends(get_auth_service),
+    data: UserLoginSchema,
+    auth_service: AuthService = Depends(get_auth_service),
 ) -> TokenResponseSchema:
     return await auth_service.login_user(data)

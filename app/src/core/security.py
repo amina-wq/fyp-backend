@@ -1,10 +1,10 @@
-from datetime import datetime, timezone, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
+
 import jwt
 from jwt import InvalidTokenError
 from pwdlib import PasswordHash
 from src.core.config import settings
-
 
 password_hash = PasswordHash.recommended()
 
@@ -18,13 +18,11 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 
 def create_access_token(subject: str) -> str:
-    expire = datetime.now(timezone.utc) + timedelta(
-        minutes=settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES
-    )
+    expire = datetime.now(UTC) + timedelta(minutes=settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES)
 
     payload: dict[str, Any] = {
-        "sub": subject,
-        "exp": expire,
+        'sub': subject,
+        'exp': expire,
     }
 
     encoded_jwt = jwt.encode(
@@ -46,7 +44,7 @@ def validate_jwt(token: str) -> dict[str, Any]:
         return payload
 
     except InvalidTokenError:
-        raise ValueError("Invalid or expired token")
+        raise ValueError('Invalid or expired token')
 
 
 def decode_access_token(token: str) -> dict[str, Any]:

@@ -34,11 +34,12 @@ ignore = [
     'RUF003',  # Comment contains ambiguous
 
     'PLR0913', # Too many arguments in function definition
+    'UP042', # Class inherits from both `str` and `enum.Enum`
 ]
 
 [tool.ruff.lint.flake8-quotes]
 inline-quotes = 'single'
-multiline-quotes = 'single'
+multiline-quotes = 'double'
 docstring-quotes = 'double'
 
 [tool.ruff.lint.mccabe]
