@@ -18,6 +18,8 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
 
+    LOGGING_LEVEL: str = "INFO"
+
     model_config = SettingsConfigDict(
         env_file=ENV_FILE,
         extra="ignore",
