@@ -6,13 +6,14 @@ services:
     ports:
       - "80:80"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:80/api/health"]
+      test: ["CMD", "curl", "-f", "http://${FASTAPI_HOST}:${FASTAPI_PORT}/api/health > dev/null || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 20s
     depends_on:
-      - mongodb
+      mongodb:
+        condition: service_started
 
   mongodb:
     image: mongo:7

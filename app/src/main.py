@@ -49,9 +49,8 @@ app.include_router(
 
 
 if __name__ == '__main__':
-    if __name__ == '__main__':
-        uvicorn.run(
-            app,
-            host=settings.FASTAPI_HOST,
-            port=settings.FASTAPI_PORT,
-        )
+    uvicorn.run(
+        app,
+        host=settings.FASTAPI_HOST,
+        port=settings.FASTAPI_PORT,
+    )
