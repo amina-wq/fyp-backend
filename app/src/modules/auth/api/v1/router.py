@@ -13,20 +13,6 @@ from src.modules.auth.services import AuthService
 router = APIRouter()
 
 
-def build_user_response(user: User) -> UserResponseSchema:
-    return UserResponseSchema(
-        id=str(user.id),
-        name=user.name,
-        email=user.email,
-        is_active=user.is_active,
-        fcm_token=user.fcm_token,
-        notification_days_before=user.notification_days_before,
-        account_type=user.account_type,
-        created_at=user.created_at,
-        updated_at=user.updated_at,
-    )
-
-
 @router.post(
     path='/register',
     response_model=TokenResponseSchema,
@@ -94,5 +80,6 @@ async def refresh_tokens(
 )
 async def get_me(
     current_user: User = Depends(get_current_user),
+    auth_service: AuthService = Depends(get_auth_service),
 ) -> UserResponseSchema:
-    return build_user_response(current_user)
+    return auth_service.build_user_response(current_user)

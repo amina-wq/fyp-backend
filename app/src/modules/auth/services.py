@@ -13,21 +13,23 @@ from src.modules.auth.schemas import (
     TokenResponseSchema,
     UserLoginSchema,
     UserRegisterSchema,
+    UserResponseSchema,
 )
 
 
 class AuthService:
-    def _create_tokens(self, user: User) -> TokenResponseSchema:
+    @classmethod
+    def _create_tokens(cls, user: User) -> TokenResponseSchema:
         access_token = create_access_token(subject=str(user.id))
         refresh_token = create_refresh_token(subject=str(user.id))
 
         return TokenResponseSchema(
             access_token=access_token,
             refresh_token=refresh_token,
-            token_type='bearer',
         )
 
-    async def register_user(self, data: UserRegisterSchema) -> TokenResponseSchema:
+    @classmethod
+    async def register_user(cls, data: UserRegisterSchema) -> TokenResponseSchema:
         existing_user = await User.find_one(User.email == data.email)
 
         if existing_user:
@@ -44,9 +46,10 @@ class AuthService:
 
         await user.insert()
 
-        return self._create_tokens(user)
+        return cls._create_tokens(user)
 
-    async def login_user(self, data: UserLoginSchema) -> TokenResponseSchema:
+    @classmethod
+    async def login_user(cls, data: UserLoginSchema) -> TokenResponseSchema:
         user = await User.find_one(User.email == data.email)
 
         if not user:
@@ -67,9 +70,10 @@ class AuthService:
                 detail='User account is inactive',
             )
 
-        return self._create_tokens(user)
+        return cls._create_tokens(user)
 
-    async def refresh_tokens(self, data: RefreshTokenRequestSchema) -> TokenResponseSchema:
+    @classmethod
+    async def refresh_tokens(cls, data: RefreshTokenRequestSchema) -> TokenResponseSchema:
         try:
             payload = validate_jwt(data.refresh_token, expected_type='refresh')
         except ValueError:
@@ -94,4 +98,18 @@ class AuthService:
                 detail='User account is inactive',
             )
 
-        return self._create_tokens(user)
+        return cls._create_tokens(user)
+
+    @classmethod
+    def build_user_response(cls, user: User) -> UserResponseSchema:
+        return UserResponseSchema(
+            user_id=str(user.id),
+            name=user.name,
+            email=user.email,
+            is_active=user.is_active,
+            fcm_token=user.fcm_token,
+            notification_days_before=user.notification_days_before,
+            account_type=user.account_type,
+            created_at=user.created_at,
+            updated_at=user.updated_at,
+        )
