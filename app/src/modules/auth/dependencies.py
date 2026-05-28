@@ -1,9 +1,11 @@
 import logging
 from typing import Any
 
-from fastapi import HTTPException, Request, status
+from beanie import PydanticObjectId
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from src.core.security import validate_jwt
+from src.modules.auth.models import User
 from src.modules.auth.services import AuthService
 
 logger = logging.getLogger(__name__)
@@ -44,6 +46,37 @@ class JWTBearer(HTTPBearer):
         logger.info('JWT token validated successfully')
 
         return payload
+
+
+jwt_bearer = JWTBearer(auto_error=False)
+
+
+async def get_current_user(
+    jwt_data: dict[str, Any] = Depends(jwt_bearer),
+) -> User:
+    user_id = jwt_data.get('sub')
+
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail='Token subject is missing',
+        )
+
+    user = await User.get(PydanticObjectId(user_id))
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail='User not found',
+        )
+
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='User account is inactive',
+        )
+
+    return user
 
 
 def get_auth_service() -> AuthService:

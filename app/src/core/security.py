@@ -23,6 +23,7 @@ def create_access_token(subject: str) -> str:
     payload: dict[str, Any] = {
         'sub': subject,
         'exp': expire,
+        'type': 'access',
     }
 
     encoded_jwt = jwt.encode(
@@ -34,13 +35,36 @@ def create_access_token(subject: str) -> str:
     return encoded_jwt
 
 
-def validate_jwt(token: str) -> dict[str, Any]:
+def create_refresh_token(subject: str) -> str:
+    expire = datetime.now(UTC) + timedelta(days=settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS)
+
+    payload: dict[str, Any] = {
+        'sub': subject,
+        'exp': expire,
+        'type': 'refresh',
+    }
+
+    return jwt.encode(
+        payload,
+        settings.JWT_SECRET_KEY,
+        algorithm=settings.JWT_ALGORITHM,
+    )
+
+
+def validate_jwt(token: str, expected_type: str | None = None) -> dict[str, Any]:
     try:
         payload = jwt.decode(
             token,
             settings.JWT_SECRET_KEY,
             algorithms=[settings.JWT_ALGORITHM],
         )
+
+        if 'sub' not in payload:
+            raise ValueError('Token subject is missing')
+
+        if expected_type is not None and payload.get('type') != expected_type:
+            raise ValueError('Invalid token type')
+
         return payload
 
     except InvalidTokenError:

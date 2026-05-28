@@ -53,4 +53,5 @@ if __name__ == '__main__':
         app,
         host=settings.FASTAPI_HOST,
         port=settings.FASTAPI_PORT,
+        use_colors=True,
     )
