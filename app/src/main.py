@@ -3,10 +3,10 @@ from contextlib import asynccontextmanager
 
 import uvicorn
 from fastapi import FastAPI
+from src.api.v1.router import router as api_v1_router
 from src.core.config import settings
 from src.core.logger import setup_logging
 from src.database.data_storage import close_database, init_database
-from src.modules.auth.api.v1.router import router as auth_router
 
 logger = logging.getLogger(__name__)
 
@@ -41,11 +41,7 @@ async def health_check():
     return {'status': 'ok', 'message': 'FoodTrack API is running'}
 
 
-app.include_router(
-    auth_router,
-    prefix='/api/v1/auth',
-    tags=['Auth'],
-)
+app.include_router(api_v1_router)
 
 
 if __name__ == '__main__':

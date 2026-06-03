@@ -30,7 +30,6 @@ class InventoryUnits(str, Enum):
 class InventoryStatus(str, Enum):
     ACTIVE = 'active'
     CONSUMED = 'consumed'
-    EXPIRED = 'expired'
     WASTED = 'wasted'
     DELETED = 'deleted'
 
@@ -55,8 +54,9 @@ class InventoryItem(Document):
     unit: InventoryUnits = InventoryUnits.PCS
     expiration_date: date
     status: InventoryStatus = InventoryStatus.ACTIVE
-    added_at: datetime = Field(default_factory=datetime.now(UTC))
-    updated_at: datetime = Field(default_factory=datetime.now(UTC))
+    scheduled_notifications: list[ScheduledNotification] = Field(default_factory=list)
+    added_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     class Settings:
         name = 'inventory_items'

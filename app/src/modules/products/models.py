@@ -13,7 +13,7 @@ class ProductSource(str, Enum):
 
 
 class Product(Document):
-    barcode: Annotated[str | None, Indexed(unique=True)] = None
+    barcode: Annotated[str | None, Indexed(unique=True, sparse=True)] = None
     name: str
     brand: str | None = None
     tags: list[str] = Field(default_factory=list)
