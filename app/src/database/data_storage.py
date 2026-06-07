@@ -5,6 +5,7 @@ from pymongo import AsyncMongoClient
 from pymongo.asynchronous.database import AsyncDatabase
 from src.core.config import settings
 from src.modules.auth.models import User
+from src.modules.inventory.models import InventoryItem
 from src.modules.products.models import Product
 
 logger = logging.getLogger(__name__)
@@ -31,6 +32,7 @@ async def init_database() -> None:
         document_models=[
             User,
             Product,
+            InventoryItem,
         ],
     )
 
