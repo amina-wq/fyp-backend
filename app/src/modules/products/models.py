@@ -1,9 +1,9 @@
 from datetime import UTC, datetime
 from enum import Enum
-from typing import Annotated
 
-from beanie import Document, Indexed
+from beanie import Document
 from pydantic import Field
+from pymongo import ASCENDING, IndexModel
 
 
 class ProductSource(str, Enum):
@@ -13,7 +13,7 @@ class ProductSource(str, Enum):
 
 
 class Product(Document):
-    barcode: Annotated[str | None, Indexed(unique=True, sparse=True)] = None
+    barcode: str | None = None
     name: str
     brand: str | None = None
     tags: list[str] = Field(default_factory=list)
@@ -26,3 +26,14 @@ class Product(Document):
 
     class Settings:
         name = 'products'
+        indexes = [  # noqa: RUF012
+            IndexModel(
+                [('barcode', ASCENDING)],
+                unique=True,
+                partialFilterExpression={
+                    'barcode': {
+                        '$type': 'string',
+                    },
+                },
+            ),
+        ]

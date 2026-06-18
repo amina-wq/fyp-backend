@@ -10,4 +10,5 @@ pwdlib==0.3.0
 pwdlib[argon2]==0.3.0
 PyJWT==2.13.0
 httpx==0.28.1
-httpx==0.28.1
+python-multipart==0.0.20
+aiofiles==24.1.0

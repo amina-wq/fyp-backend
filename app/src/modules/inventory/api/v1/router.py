@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Path, Query, status
+from fastapi import APIRouter, Depends, File, Path, Query, UploadFile, status
 from src.core.enums import FoodCategory
 from src.modules.auth.dependencies import JWTBearer
 from src.modules.inventory.dependencies import get_inventory_service
@@ -108,6 +108,52 @@ async def update_inventory_item(
         item_id=item_id,
         user_id=jwt_data['sub'],
         data=data,
+    )
+
+
+@router.post(
+    '/{item_id}/image',
+    response_model=InventoryItemResponseSchema,
+    summary='Upload inventory item image',
+)
+async def upload_inventory_item_image(
+    item_id: Annotated[
+        str,
+        Path(
+            min_length=1,
+            description='MongoDB inventory item id',
+        ),
+    ],
+    image: Annotated[UploadFile, File()],
+    jwt_data: Annotated[dict, Depends(JWTBearer())],
+    service: Annotated[InventoryService, Depends(get_inventory_service)],
+) -> InventoryItemResponseSchema:
+    return await service.upload_item_image(
+        item_id=item_id,
+        user_id=jwt_data['sub'],
+        image=image,
+    )
+
+
+@router.delete(
+    '/{item_id}/image',
+    response_model=InventoryItemResponseSchema,
+    summary='Delete inventory item image',
+)
+async def delete_inventory_item_image(
+    item_id: Annotated[
+        str,
+        Path(
+            min_length=1,
+            description='MongoDB inventory item id',
+        ),
+    ],
+    jwt_data: Annotated[dict, Depends(JWTBearer())],
+    service: Annotated[InventoryService, Depends(get_inventory_service)],
+) -> InventoryItemResponseSchema:
+    return await service.delete_item_image(
+        item_id=item_id,
+        user_id=jwt_data['sub'],
     )
 
 

@@ -69,7 +69,3 @@ def validate_jwt(token: str, expected_type: str | None = None) -> dict[str, Any]
 
     except InvalidTokenError:
         raise ValueError('Invalid or expired token')
-
-
-def decode_access_token(token: str) -> dict[str, Any]:
-    return validate_jwt(token)

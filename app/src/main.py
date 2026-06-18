@@ -1,8 +1,10 @@
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 import uvicorn
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from src.api.v1.router import router as api_v1_router
 from src.core.config import settings
 from src.core.logger import setup_logging
@@ -33,6 +35,15 @@ app = FastAPI(
     docs_url='/api/openapi',
     openapi_url='/api/openapi.json',
     lifespan=lifespan,
+)
+
+UPLOADS_DIR = Path('uploads')
+UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+
+app.mount(
+    '/uploads',
+    StaticFiles(directory='uploads'),
+    name='uploads',
 )
 
 

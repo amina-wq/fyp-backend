@@ -48,6 +48,7 @@ class InventoryItem(Document):
     custom_name: str | None = None
     category: FoodCategory = FoodCategory.OTHER
     notes: str | None = None
+    item_image_url: str | None = None
     location: StorageLocation = StorageLocation.FRIDGE
     opened_at: datetime | None = None
     amount: float = Field(default=1, gt=0)

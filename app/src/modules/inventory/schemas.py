@@ -19,6 +19,7 @@ class InventoryItemCreateSchema(BaseModel):
     custom_name: Annotated[str | None, Field(default=None, max_length=150)] | None = None
     category: FoodCategory = FoodCategory.OTHER
     notes: Annotated[str | None, Field(default=None, max_length=500)] | None = None
+    item_image_url: str | None = None
     location: StorageLocation = StorageLocation.FRIDGE
     amount: Annotated[float, Field(gt=0)] = 1
     unit: InventoryUnits = InventoryUnits.PCS
@@ -36,6 +37,7 @@ class InventoryItemUpdateSchema(BaseModel):
     custom_name: Annotated[str | None, Field(default=None, max_length=150)] = None
     category: FoodCategory | None = None
     notes: Annotated[str | None, Field(default=None, max_length=500)] = None
+    item_image_url: str | None = None
     location: StorageLocation | None = None
     amount: Annotated[float | None, Field(gt=0)] = None
     unit: InventoryUnits | None = None
@@ -49,6 +51,9 @@ class InventoryItemResponseSchema(BaseModel):
     barcode: str | None = None
     custom_name: str | None = None
     display_name: str
+    item_image_url: str | None = None
+    product_image_url: str | None = None
+    product_brand: str | None = None
     category: FoodCategory
     notes: str | None = None
     location: StorageLocation

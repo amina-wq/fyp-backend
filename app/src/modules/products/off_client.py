@@ -25,9 +25,15 @@ async def fetch_product_by_barcode(barcode: str) -> dict | None:
     fields = ','.join(
         [
             'product_name',
+            'product_name_en',
+            'generic_name',
+            'generic_name_en',
             'brands',
             'categories_tags',
             'image_url',
+            'image_front_url',
+            'image_small_url',
+            'image_thumb_url',
             'quantity',
         ]
     )
@@ -59,12 +65,26 @@ async def fetch_product_by_barcode(barcode: str) -> dict | None:
 
     product = data.get('product', {})
 
+    image_url = (
+        product.get('image_url')
+        or product.get('image_front_url')
+        or product.get('image_small_url')
+        or product.get('image_thumb_url')
+    )
+
+    name = (
+        product.get('product_name')
+        or product.get('product_name_en')
+        or product.get('generic_name')
+        or product.get('generic_name_en')
+    )
+
     return {
         'barcode': barcode,
-        'name': product.get('product_name') or None,
+        'name': name or None,
         'brand': product.get('brands') or None,
         'tags': _clean_tags(product.get('categories_tags', [])),
-        'image_url': product.get('image_url') or None,
+        'image_url': image_url or None,
         'quantity': product.get('quantity') or None,
         'source': 'off',
     }

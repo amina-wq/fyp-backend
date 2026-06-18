@@ -1,7 +1,10 @@
+import uuid
 from datetime import UTC, date, datetime, timedelta
+from pathlib import Path
 
+import aiofiles
 from beanie import PydanticObjectId
-from fastapi import HTTPException, status
+from fastapi import HTTPException, UploadFile, status
 from src.core.enums import FoodCategory
 from src.modules.auth.models import User
 from src.modules.inventory.models import InventoryItem, InventoryStatus, ScheduledNotification
@@ -14,6 +17,14 @@ from src.modules.inventory.schemas import (
 )
 from src.modules.products.models import Product
 from src.modules.products.services import ProductService
+
+UPLOADS_DIR = Path('uploads/inventory_items')
+ALLOWED_IMAGE_TYPES = {
+    'image/jpeg': '.jpg',
+    'image/png': '.png',
+    'image/webp': '.webp',
+}
+MAX_IMAGE_SIZE = 5 * 1024 * 1024
 
 
 class InventoryService:
@@ -85,23 +96,34 @@ class InventoryService:
 
         return item
 
+    async def _get_product_for_item(
+        self,
+        item: InventoryItem,
+    ) -> Product | None:
+        if not item.product_id:
+            return None
+
+        return await Product.get(item.product_id)
+
     async def _get_product_display_name(
         self,
         item: InventoryItem,
+        product: Product | None = None,
     ) -> str:
         if item.custom_name:
             return item.custom_name
 
-        if item.product_id:
-            product = await Product.get(item.product_id)
-
-            if product:
-                return product.name
+        if product:
+            return product.name
 
         return 'Unnamed product'
 
     async def _to_response(self, item: InventoryItem) -> InventoryItemResponseSchema:
-        display_name = await self._get_product_display_name(item)
+        product = await self._get_product_for_item(item)
+        display_name = await self._get_product_display_name(
+            item=item,
+            product=product,
+        )
         expiry_state = self._calculate_expiry_state(item.expiration_date)
 
         return InventoryItemResponseSchema(
@@ -111,6 +133,7 @@ class InventoryService:
             barcode=item.barcode,
             custom_name=item.custom_name,
             display_name=display_name,
+            item_image_url=item.item_image_url,
             category=item.category,
             notes=item.notes,
             location=item.location,
@@ -120,6 +143,8 @@ class InventoryService:
             status=item.status,
             expiry_state=expiry_state,
             scheduled_notifications=item.scheduled_notifications,
+            product_image_url=product.image_url if product else None,
+            product_brand=product.brand if product else None,
             added_at=item.added_at,
             updated_at=item.updated_at,
         )
@@ -214,6 +239,7 @@ class InventoryService:
             custom_name=data.custom_name,
             category=data.category,
             notes=data.notes,
+            item_image_url=data.item_image_url,
             location=data.location,
             amount=data.amount,
             unit=data.unit,
@@ -400,3 +426,63 @@ class InventoryService:
             expiring_in_5_days_count=expiring_in_5_days_count,
             fresh_count=fresh_count,
         )
+
+    async def upload_item_image(
+        self,
+        item_id: str,
+        user_id: str,
+        image: UploadFile,
+    ) -> InventoryItemResponseSchema:
+        item = await self._get_user_item_or_404(
+            item_id=item_id,
+            user_id=user_id,
+        )
+
+        content_type = image.content_type
+
+        if content_type is None or content_type not in ALLOWED_IMAGE_TYPES:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail='Only JPEG, PNG and WEBP images are allowed',
+            )
+
+        content = await image.read()
+
+        if len(content) > MAX_IMAGE_SIZE:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail='Image size must be less than 5MB',
+            )
+
+        UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+
+        extension = ALLOWED_IMAGE_TYPES[content_type]
+        file_name = f'{item.id}_{uuid.uuid4().hex}{extension}'
+        file_path = UPLOADS_DIR / file_name
+
+        async with aiofiles.open(file_path, 'wb') as file:
+            await file.write(content)
+
+        item.item_image_url = f'/uploads/inventory_items/{file_name}'
+        item.updated_at = datetime.now(UTC)
+
+        await item.save()
+
+        return await self._to_response(item)
+
+    async def delete_item_image(
+        self,
+        item_id: str,
+        user_id: str,
+    ) -> InventoryItemResponseSchema:
+        item = await self._get_user_item_or_404(
+            item_id=item_id,
+            user_id=user_id,
+        )
+
+        item.item_image_url = None
+        item.updated_at = datetime.now(UTC)
+
+        await item.save()
+
+        return await self._to_response(item)

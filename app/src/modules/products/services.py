@@ -64,6 +64,14 @@ class ProductService:
         existing_product = await Product.find_one(Product.barcode == barcode)
 
         if existing_product:
+            if not existing_product.image_url:
+                off_product = await fetch_product_by_barcode(barcode)
+
+                if off_product and off_product.get('image_url'):
+                    existing_product.image_url = off_product.get('image_url')
+                    existing_product.updated_at = datetime.now(UTC)
+                    await existing_product.save()
+
             return self._to_response(existing_product)
 
         off_product = await fetch_product_by_barcode(barcode)
