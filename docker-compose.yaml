@@ -1,12 +1,13 @@
 services:
   fyp-backend:
     build: ./app
+    restart: always
     env_file:
       - .env
     ports:
       - "80:80"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://${FASTAPI_HOST}:${FASTAPI_PORT}/api/health > dev/null || exit 1"]
+      test: [ "CMD-SHELL", "curl -f http://${FASTAPI_HOST}:${FASTAPI_PORT}/api/health > /dev/null || exit 1" ]
       interval: 30s
       timeout: 10s
       retries: 3

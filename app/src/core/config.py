@@ -21,6 +21,12 @@ class Settings(BaseSettings):
 
     LOGGING_LEVEL: str = 'INFO'
 
+    AWS_ACCESS_KEY_ID: str | None = None
+    AWS_SECRET_ACCESS_KEY: str | None = None
+    AWS_REGION: str
+    AWS_S3_BUCKET_NAME: str
+    AWS_S3_PUBLIC_BASE_URL: str
+
     model_config = SettingsConfigDict(
         env_file=ENV_FILE,
         extra='ignore',
