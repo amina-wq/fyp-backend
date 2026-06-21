@@ -1,15 +1,64 @@
-import uvicorn
+import logging
+from contextlib import asynccontextmanager
+from pathlib import Path
 
+import uvicorn
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+from src.api.v1.router import router as api_v1_router
+from src.core.config import settings
+from src.core.logger import setup_logging
+from src.database.data_storage import close_database, init_database
+
+logger = logging.getLogger(__name__)
+
+setup_logging()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    logger.info('Starting FoodTrack API')
+    await init_database()
+    logger.info('Application startup completed')
+
+    yield
+
+    logger.info('Shutting down FoodTrack API')
+    await close_database()
+    logger.info('Application shutdown completed')
 
 
 app = FastAPI(
-    title="FoodTrack API",
-    description="Cross-platform mobile app for automated food expiration tracking",
-    version="1.0.0",
+    title='FoodTrack API',
+    description='Cross-platform mobile app for automated food expiration tracking',
+    version='1.0.0',
     docs_url='/api/openapi',
     openapi_url='/api/openapi.json',
+    lifespan=lifespan,
 )
 
-if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+UPLOADS_DIR = Path('uploads')
+UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+
+app.mount(
+    '/uploads',
+    StaticFiles(directory='uploads'),
+    name='uploads',
+)
+
+
+@app.get('/api/health')
+async def health_check():
+    return {'status': 'ok', 'message': 'FoodTrack API is running'}
+
+
+app.include_router(api_v1_router)
+
+
+if __name__ == '__main__':
+    uvicorn.run(
+        app,
+        host=settings.FASTAPI_HOST,
+        port=settings.FASTAPI_PORT,
+        use_colors=True,
+    )

@@ -1,0 +1,17 @@
+services:
+  fyp-backend:
+    extends:
+      file: docker-compose.yaml
+      service: fyp-backend
+    ports:
+      - "80:80"
+
+  mongodb:
+    extends:
+      file: docker-compose.yaml
+      service: mongodb
+    ports:
+      - "27017:27017"
+
+volumes:
+  mongodb_data:
