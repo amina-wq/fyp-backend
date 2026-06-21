@@ -1,10 +1,12 @@
 import uuid
 from datetime import UTC, date, datetime, timedelta
-from pathlib import Path
+from urllib.parse import urlparse
 
-import aiofiles
+import boto3
 from beanie import PydanticObjectId
+from botocore.exceptions import BotoCoreError, ClientError
 from fastapi import HTTPException, UploadFile, status
+from src.core.config import settings
 from src.core.enums import FoodCategory
 from src.modules.auth.models import User
 from src.modules.inventory.models import InventoryItem, InventoryStatus, ScheduledNotification
@@ -18,18 +20,77 @@ from src.modules.inventory.schemas import (
 from src.modules.products.models import Product
 from src.modules.products.services import ProductService
 
-UPLOADS_DIR = Path('uploads/inventory_items')
 ALLOWED_IMAGE_TYPES = {
     'image/jpeg': '.jpg',
     'image/png': '.png',
     'image/webp': '.webp',
 }
 MAX_IMAGE_SIZE = 5 * 1024 * 1024
+S3_INVENTORY_ITEMS_PREFIX = 'inventory_items'
 
 
 class InventoryService:
     def __init__(self):
         self.product_service = ProductService()
+
+        s3_client_kwargs = {
+            'region_name': settings.AWS_REGION,
+        }
+
+        if settings.AWS_ACCESS_KEY_ID and settings.AWS_SECRET_ACCESS_KEY:
+            s3_client_kwargs['aws_access_key_id'] = settings.AWS_ACCESS_KEY_ID
+            s3_client_kwargs['aws_secret_access_key'] = settings.AWS_SECRET_ACCESS_KEY
+
+        self.s3_client = boto3.client(
+            's3',
+            **s3_client_kwargs,
+        )
+
+    def _build_s3_image_key(
+        self,
+        item_id: str,
+        extension: str,
+    ) -> str:
+        return f'{S3_INVENTORY_ITEMS_PREFIX}/{item_id}_{uuid.uuid4().hex}{extension}'
+
+    def _build_s3_public_url(self, object_key: str) -> str:
+        base_url = settings.AWS_S3_PUBLIC_BASE_URL.rstrip('/')
+
+        return f'{base_url}/{object_key}'
+
+    def _extract_s3_key_from_url(self, image_url: str | None) -> str | None:
+        if not image_url:
+            return None
+
+        base_url = settings.AWS_S3_PUBLIC_BASE_URL.rstrip('/')
+
+        if not image_url.startswith(base_url):
+            return None
+
+        parsed_url = urlparse(image_url)
+        object_key = parsed_url.path.lstrip('/')
+
+        if not object_key.startswith(f'{S3_INVENTORY_ITEMS_PREFIX}/'):
+            return None
+
+        return object_key
+
+    def _delete_s3_image_if_exists(self, image_url: str | None) -> None:
+        object_key = self._extract_s3_key_from_url(image_url)
+
+        if object_key is None:
+            return
+
+        try:
+            self.s3_client.delete_object(
+                Bucket=settings.AWS_S3_BUCKET_NAME,
+                Key=object_key,
+            )
+        except (BotoCoreError, ClientError):
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail='Failed to delete image from S3',
+            )
 
     def _calculate_expiry_state(self, expiration_date: date) -> ExpiryState:
         today = date.today()
@@ -454,19 +515,34 @@ class InventoryService:
                 detail='Image size must be less than 5MB',
             )
 
-        UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
-
         extension = ALLOWED_IMAGE_TYPES[content_type]
-        file_name = f'{item.id}_{uuid.uuid4().hex}{extension}'
-        file_path = UPLOADS_DIR / file_name
+        object_key = self._build_s3_image_key(
+            item_id=str(item.id),
+            extension=extension,
+        )
 
-        async with aiofiles.open(file_path, 'wb') as file:
-            await file.write(content)
+        try:
+            self.s3_client.put_object(
+                Bucket=settings.AWS_S3_BUCKET_NAME,
+                Key=object_key,
+                Body=content,
+                ContentType=content_type,
+                CacheControl='public, max-age=31536000',
+            )
+        except (BotoCoreError, ClientError):
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail='Failed to upload image to S3',
+            )
 
-        item.item_image_url = f'/uploads/inventory_items/{file_name}'
+        old_image_url = item.item_image_url
+
+        item.item_image_url = self._build_s3_public_url(object_key)
         item.updated_at = datetime.now(UTC)
 
         await item.save()
+
+        self._delete_s3_image_if_exists(old_image_url)
 
         return await self._to_response(item)
 
@@ -480,9 +556,13 @@ class InventoryService:
             user_id=user_id,
         )
 
+        old_image_url = item.item_image_url
+
         item.item_image_url = None
         item.updated_at = datetime.now(UTC)
 
         await item.save()
+
+        self._delete_s3_image_if_exists(old_image_url)
 
         return await self._to_response(item)
