@@ -112,14 +112,20 @@ class ProductService:
         self,
         data: ManualProductCreateSchema,
     ) -> ProductResponseSchema:
-        if data.barcode:
-            existing_product = await Product.find_one(Product.barcode == data.barcode)
+        if not data.barcode:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail='Manual product must have a barcode. '
+                'Custom food without barcode should be added directly to inventory.',
+            )
 
-            if existing_product:
-                raise HTTPException(
-                    status_code=status.HTTP_409_CONFLICT,
-                    detail='Product with this barcode already exists',
-                )
+        existing_product = await Product.find_one(Product.barcode == data.barcode)
+
+        if existing_product:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail='Product with this barcode already exists',
+            )
 
         product = Product(
             barcode=data.barcode,
