@@ -2,6 +2,7 @@ from fastapi import APIRouter
 from src.modules.auth.api.v1.router import router as auth_router
 from src.modules.inventory.api.v1.router import router as inventory_router
 from src.modules.products.api.v1.router import router as products_router
+from src.modules.shopping_list.api.v1.router import router as shopping_list_router
 
 router = APIRouter(prefix='/api/v1')
 
@@ -22,4 +23,11 @@ router.include_router(
     inventory_router,
     prefix='/inventory',
     tags=['Inventory'],
+)
+
+
+router.include_router(
+    shopping_list_router,
+    prefix='/shopping-list',
+    tags=['Shopping List'],
 )
