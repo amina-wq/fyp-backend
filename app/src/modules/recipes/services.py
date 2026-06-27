@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from beanie import PydanticObjectId
 from fastapi import HTTPException, status
 from pymongo.errors import DuplicateKeyError
-from src.modules.inventory.models import InventoryItem, InventoryStatus
+from src.modules.inventory.models import InventoryItem, InventoryStatus, InventoryUnits
 from src.modules.products.models import Product
 from src.modules.recipes.models import (
     Recipe,
@@ -38,6 +38,89 @@ class RecipeService:
             value = value[:-1]
 
         return value
+
+    def _normalize_unit(
+        self,
+        unit: str | InventoryUnits | None,
+    ) -> str | None:
+        if unit is None:
+            return None
+
+        value = unit.value if isinstance(unit, InventoryUnits) else unit
+        value = value.strip().lower().replace('.', '')
+
+        if not value:
+            return None
+
+        aliases = {
+            'g': 'g',
+            'gram': 'g',
+            'grams': 'g',
+            'kg': 'kg',
+            'kilogram': 'kg',
+            'kilograms': 'kg',
+            'ml': 'ml',
+            'milliliter': 'ml',
+            'milliliters': 'ml',
+            'millilitre': 'ml',
+            'millilitres': 'ml',
+            'l': 'l',
+            'liter': 'l',
+            'liters': 'l',
+            'litre': 'l',
+            'litres': 'l',
+            'pc': 'pcs',
+            'pcs': 'pcs',
+            'piece': 'pcs',
+            'pieces': 'pcs',
+            'unit': 'pcs',
+            'units': 'pcs',
+        }
+
+        return aliases.get(value)
+
+    def _unit_group_and_base_multiplier(
+        self,
+        unit: str | None,
+    ) -> tuple[str, float] | None:
+        if unit is None:
+            return None
+
+        units = {
+            'g': ('mass', 1.0),
+            'kg': ('mass', 1000.0),
+            'ml': ('volume', 1.0),
+            'l': ('volume', 1000.0),
+            'pcs': ('count', 1.0),
+        }
+
+        return units.get(unit)
+
+    def _convert_to_base_amount(
+        self,
+        amount: float | None,
+        unit: str | None,
+    ) -> tuple[str, float] | None:
+        if amount is None:
+            return None
+
+        unit_info = self._unit_group_and_base_multiplier(unit)
+
+        if unit_info is None:
+            return None
+
+        unit_group, multiplier = unit_info
+
+        return unit_group, amount * multiplier
+
+    def _inventory_unit_from_normalized(
+        self,
+        unit: str,
+    ) -> InventoryUnits | None:
+        try:
+            return InventoryUnits(unit)
+        except ValueError:
+            return None
 
     def _is_match(
         self,
@@ -111,14 +194,14 @@ class RecipeService:
         self,
         item: InventoryItem,
     ) -> str | None:
-        if item.custom_name:
-            return item.custom_name
-
         if item.product_id:
             product = await Product.get(item.product_id)
 
             if product:
                 return product.name
+
+        if item.custom_name:
+            return item.custom_name
 
         if item.barcode:
             return item.barcode
@@ -266,6 +349,8 @@ class RecipeService:
 
         recipes: list[Recipe] = []
 
+        spoonacular_score_map: dict[int, tuple[int, int, float]] = {}
+
         if cached_query and cached_query.recipe_ids:
             recipes = await Recipe.find(
                 Recipe.spoonacular_id in cached_query.recipe_ids,
@@ -278,10 +363,23 @@ class RecipeService:
             )
 
             recipes = []
+            spoonacular_score_map: dict[int, tuple[int, int, float]] = {}
 
             for recipe_data in spoonacular_results:
                 recipe = await self._save_recipe_from_spoonacular(recipe_data)
                 recipes.append(recipe)
+
+                used_count = self._extract_used_ingredient_count(recipe_data)
+                missed_count = self._extract_missed_ingredient_count(recipe_data)
+                total_count = used_count + missed_count
+
+                match_score = round((used_count / total_count) * 100, 1) if total_count else 0.0
+
+                spoonacular_score_map[recipe.spoonacular_id] = (
+                    used_count,
+                    missed_count,
+                    match_score,
+                )
 
             await self._cache_query(
                 ingredient_names=inventory_names,
@@ -291,28 +389,33 @@ class RecipeService:
         response_items: list[RecipeResponseSchema] = []
 
         for recipe in recipes:
-            match_score = self._compute_match_score(
-                inventory_names=inventory_names,
-                recipe_ingredient_names=recipe.ingredient_names,
-            )
+            spoonacular_score = spoonacular_score_map.get(recipe.spoonacular_id)
 
-            used_ingredient_count = 0
-            missed_ingredient_count = 0
+            if spoonacular_score:
+                used_ingredient_count, missed_ingredient_count, match_score = spoonacular_score
+            else:
+                match_score = self._compute_match_score(
+                    inventory_names=inventory_names,
+                    recipe_ingredient_names=recipe.ingredient_names,
+                )
 
-            if recipe.ingredient_names:
-                for recipe_ingredient_name in recipe.ingredient_names:
-                    has_match = any(
-                        self._is_match(
-                            inventory_name=inventory_name,
-                            recipe_ingredient_name=recipe_ingredient_name,
+                used_ingredient_count = 0
+                missed_ingredient_count = 0
+
+                if recipe.ingredient_names:
+                    for recipe_ingredient_name in recipe.ingredient_names:
+                        has_match = any(
+                            self._is_match(
+                                inventory_name=inventory_name,
+                                recipe_ingredient_name=recipe_ingredient_name,
+                            )
+                            for inventory_name in inventory_names
                         )
-                        for inventory_name in inventory_names
-                    )
 
-                    if has_match:
-                        used_ingredient_count += 1
-                    else:
-                        missed_ingredient_count += 1
+                        if has_match:
+                            used_ingredient_count += 1
+                        else:
+                            missed_ingredient_count += 1
 
             response_items.append(
                 RecipeResponseSchema(
@@ -415,19 +518,105 @@ class RecipeService:
 
         return recipe
 
-    def _find_matching_inventory_item(
+    def _find_matching_inventory_items(
         self,
         ingredient_name: str,
         inventory_items_with_names: list[tuple[InventoryItem, str]],
-    ) -> tuple[InventoryItem, str] | None:
+    ) -> list[tuple[InventoryItem, str]]:
+        matching_items: list[tuple[InventoryItem, str]] = []
+
         for item, inventory_name in inventory_items_with_names:
             if self._is_match(
                 inventory_name=inventory_name,
                 recipe_ingredient_name=ingredient_name,
             ):
-                return item, inventory_name
+                matching_items.append((item, inventory_name))
 
-        return None
+        return matching_items
+
+    def _build_ingredient_availability(
+        self,
+        ingredient: RecipeIngredientDetail,
+        matching_items: list[tuple[InventoryItem, str]],
+    ) -> tuple[
+        RecipeIngredientAvailability,
+        str | None,
+        float | None,
+        InventoryUnits | None,
+        bool,
+    ]:
+        if not matching_items:
+            return (
+                RecipeIngredientAvailability.MISSING,
+                None,
+                None,
+                None,
+                False,
+            )
+
+        recipe_unit = self._normalize_unit(ingredient.unit)
+        recipe_base_amount = self._convert_to_base_amount(
+            amount=ingredient.amount,
+            unit=recipe_unit,
+        )
+
+        first_item = matching_items[0][0]
+
+        if recipe_base_amount is None:
+            return (
+                RecipeIngredientAvailability.UNKNOWN_AMOUNT,
+                str(first_item.id),
+                first_item.amount,
+                first_item.unit,
+                False,
+            )
+
+        recipe_unit_group, required_base_amount = recipe_base_amount
+
+        total_inventory_base_amount = 0.0
+        comparable_items: list[InventoryItem] = []
+
+        for item, _ in matching_items:
+            inventory_unit = self._normalize_unit(item.unit)
+            inventory_base_amount = self._convert_to_base_amount(
+                amount=item.amount,
+                unit=inventory_unit,
+            )
+
+            if inventory_base_amount is None:
+                continue
+
+            inventory_unit_group, item_base_amount = inventory_base_amount
+
+            if inventory_unit_group != recipe_unit_group:
+                continue
+
+            total_inventory_base_amount += item_base_amount
+            comparable_items.append(item)
+
+        if not comparable_items:
+            return (
+                RecipeIngredientAvailability.UNKNOWN_AMOUNT,
+                str(first_item.id),
+                first_item.amount,
+                first_item.unit,
+                False,
+            )
+
+        representative_item = comparable_items[0]
+
+        if total_inventory_base_amount >= required_base_amount:
+            availability_status = RecipeIngredientAvailability.AVAILABLE
+        else:
+            availability_status = RecipeIngredientAvailability.INSUFFICIENT
+
+        return (
+            availability_status,
+            str(representative_item.id),
+            representative_item.amount,
+            representative_item.unit,
+            True,
+        )
 
     async def get_recipe_details(
         self,
@@ -449,23 +638,21 @@ class RecipeService:
         ingredients: list[RecipeIngredientDetailResponseSchema] = []
 
         for ingredient in recipe.ingredients:
-            matching_item = self._find_matching_inventory_item(
+            matching_items = self._find_matching_inventory_items(
                 ingredient_name=ingredient.name,
                 inventory_items_with_names=inventory_items_with_names,
             )
 
-            if matching_item:
-                item, _ = matching_item
-
-                availability_status = RecipeIngredientAvailability.AVAILABLE
-                inventory_item_id = str(item.id)
-                inventory_amount = item.amount
-                inventory_unit = item.unit
-            else:
-                availability_status = RecipeIngredientAvailability.MISSING
-                inventory_item_id = None
-                inventory_amount = None
-                inventory_unit = None
+            (
+                availability_status,
+                inventory_item_id,
+                inventory_amount,
+                inventory_unit,
+                is_amount_comparable,
+            ) = self._build_ingredient_availability(
+                ingredient=ingredient,
+                matching_items=matching_items,
+            )
 
             ingredients.append(
                 RecipeIngredientDetailResponseSchema(
@@ -477,6 +664,7 @@ class RecipeService:
                     inventory_item_id=inventory_item_id,
                     inventory_amount=inventory_amount,
                     inventory_unit=inventory_unit,
+                    is_amount_comparable=is_amount_comparable,
                 )
             )
 
