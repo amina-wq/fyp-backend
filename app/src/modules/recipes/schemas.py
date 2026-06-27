@@ -27,6 +27,8 @@ class RecipeIngredientDetailResponseSchema(BaseModel):
     inventory_amount: float | None = None
     inventory_unit: InventoryUnits | None = None
 
+    is_amount_comparable: bool = False
+
 
 class RecipeStepDetailResponseSchema(BaseModel):
     number: int
