@@ -5,6 +5,7 @@ from pymongo import AsyncMongoClient
 from pymongo.asynchronous.database import AsyncDatabase
 from src.core.config import settings
 from src.modules.auth.models import User
+from src.modules.ingredients.models import IngredientNormalization
 from src.modules.inventory.models import InventoryItem
 from src.modules.products.models import Product
 from src.modules.recipes.models import Recipe, RecipeQuery
@@ -38,6 +39,7 @@ async def init_database() -> None:
             ShoppingListItem,
             Recipe,
             RecipeQuery,
+            IngredientNormalization,
         ],
     )
 
