@@ -27,6 +27,8 @@ class Settings(BaseSettings):
     AWS_S3_BUCKET_NAME: str
     AWS_S3_PUBLIC_BASE_URL: str
 
+    SPOONACULAR_API_KEY: str | None = None
+
     model_config = SettingsConfigDict(
         env_file=ENV_FILE,
         extra='ignore',
