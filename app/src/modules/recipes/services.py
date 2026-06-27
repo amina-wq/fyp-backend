@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 from beanie import PydanticObjectId
 from fastapi import HTTPException, status
 from pymongo.errors import DuplicateKeyError
+from src.modules.ingredients.services import IngredientNormalizationService
 from src.modules.inventory.models import InventoryItem, InventoryStatus, InventoryUnits
 from src.modules.products.models import Product
 from src.modules.recipes.models import (
@@ -28,6 +29,7 @@ MAX_INGREDIENTS = 15
 class RecipeService:
     def __init__(self) -> None:
         self.spoonacular_client = SpoonacularClient()
+        self.normalization_service = IngredientNormalizationService()
 
     def _normalize_name(self, name: str) -> str:
         value = name.strip().lower()
@@ -190,23 +192,23 @@ class RecipeService:
     def _extract_missed_ingredient_count(self, recipe_data: dict) -> int:
         return len(recipe_data.get('missedIngredients', []))
 
-    async def _get_inventory_item_name(
+    async def _get_inventory_item_name_and_tags(
         self,
         item: InventoryItem,
-    ) -> str | None:
+    ) -> tuple[str | None, list[str]]:
         if item.product_id:
             product = await Product.get(item.product_id)
 
             if product:
-                return product.name
+                return product.name, product.tags
 
         if item.custom_name:
-            return item.custom_name
+            return item.custom_name, []
 
         if item.barcode:
-            return item.barcode
+            return item.barcode, []
 
-        return None
+        return None, []
 
     async def _get_inventory_context(
         self,
@@ -230,23 +232,29 @@ class RecipeService:
         )
 
         seen: set[str] = set()
-        names: list[str] = []
+        normalized_names: list[str] = []
 
         for item in items:
-            name = await self._get_inventory_item_name(item)
+            raw_name, tags = await self._get_inventory_item_name_and_tags(item)
 
-            if not name:
+            if not raw_name:
                 continue
 
-            normalized_name = self._normalize_name(name)
+            normalized_name = await self.normalization_service.normalize(
+                raw=raw_name,
+                tags=tags,
+            )
+
+            if not normalized_name:
+                normalized_name = self._normalize_name(raw_name)
 
             if not normalized_name or normalized_name in seen:
                 continue
 
             seen.add(normalized_name)
-            names.append(name)
+            normalized_names.append(normalized_name)
 
-        return items, names[:MAX_INGREDIENTS]
+        return items, normalized_names[:MAX_INGREDIENTS]
 
     async def _save_recipe_from_spoonacular(
         self,
@@ -630,10 +638,21 @@ class RecipeService:
         inventory_items_with_names: list[tuple[InventoryItem, str]] = []
 
         for item in inventory_items:
-            name = await self._get_inventory_item_name(item)
+            raw_name, tags = await self._get_inventory_item_name_and_tags(item)
 
-            if name:
-                inventory_items_with_names.append((item, name))
+            if not raw_name:
+                continue
+
+            normalized_name = await self.normalization_service.normalize(
+                raw=raw_name,
+                tags=tags,
+            )
+
+            if not normalized_name:
+                normalized_name = self._normalize_name(raw_name)
+
+            if normalized_name:
+                inventory_items_with_names.append((item, normalized_name))
 
         ingredients: list[RecipeIngredientDetailResponseSchema] = []
 
