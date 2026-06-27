@@ -7,6 +7,7 @@ from src.core.config import settings
 from src.modules.auth.models import User
 from src.modules.inventory.models import InventoryItem
 from src.modules.products.models import Product
+from src.modules.recipes.models import Recipe, RecipeQuery
 from src.modules.shopping_list.models import ShoppingListItem
 
 logger = logging.getLogger(__name__)
@@ -35,6 +36,8 @@ async def init_database() -> None:
             Product,
             InventoryItem,
             ShoppingListItem,
+            Recipe,
+            RecipeQuery,
         ],
     )
 
