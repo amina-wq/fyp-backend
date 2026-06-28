@@ -1,6 +1,5 @@
 from datetime import datetime
 
-from beanie import PydanticObjectId
 from pydantic import BaseModel, Field
 from src.core.enums import FoodCategory
 from src.modules.inventory.models import InventoryUnits
@@ -13,7 +12,7 @@ class ShoppingListItemCreateSchema(BaseModel):
     amount: float | None = Field(default=None, gt=0)
     unit: InventoryUnits | None = None
     source: ShoppingListSource = ShoppingListSource.MANUAL
-    source_id: PydanticObjectId | None = None
+    source_id: str | None = None
 
 
 class ShoppingListItemUpdateSchema(BaseModel):
