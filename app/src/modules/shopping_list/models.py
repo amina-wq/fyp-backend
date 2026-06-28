@@ -22,7 +22,7 @@ class ShoppingListItem(Document):
     unit: InventoryUnits | None = None
     is_checked: bool = False
     source: ShoppingListSource = ShoppingListSource.MANUAL
-    source_id: PydanticObjectId | None = None
+    source_id: str | None = None
     added_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 

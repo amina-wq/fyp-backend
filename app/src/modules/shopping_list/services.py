@@ -21,7 +21,7 @@ class ShoppingListService:
             unit=item.unit,
             is_checked=item.is_checked,
             source=item.source,
-            source_id=str(item.source_id) if item.source_id else None,
+            source_id=item.source_id,
             added_at=item.added_at,
             updated_at=item.updated_at,
         )
