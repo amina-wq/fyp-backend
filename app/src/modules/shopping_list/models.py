@@ -11,7 +11,6 @@ from src.modules.inventory.models import InventoryUnits
 class ShoppingListSource(str, Enum):
     MANUAL = 'manual'
     INVENTORY = 'inventory'
-    RECIPE = 'recipe'
 
 
 class ShoppingListItem(Document):
