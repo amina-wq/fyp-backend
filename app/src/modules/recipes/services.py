@@ -356,12 +356,15 @@ class RecipeService:
         )
 
         recipes: list[Recipe] = []
-
         spoonacular_score_map: dict[int, tuple[int, int, float]] = {}
 
         if cached_query and cached_query.recipe_ids:
             recipes = await Recipe.find(
-                Recipe.spoonacular_id in cached_query.recipe_ids,
+                {
+                    'spoonacular_id': {
+                        '$in': cached_query.recipe_ids,
+                    },
+                }
             ).to_list()
 
         if len(recipes) < data.number:
@@ -371,7 +374,7 @@ class RecipeService:
             )
 
             recipes = []
-            spoonacular_score_map: dict[int, tuple[int, int, float]] = {}
+            spoonacular_score_map = {}
 
             for recipe_data in spoonacular_results:
                 recipe = await self._save_recipe_from_spoonacular(recipe_data)
@@ -381,7 +384,14 @@ class RecipeService:
                 missed_count = self._extract_missed_ingredient_count(recipe_data)
                 total_count = used_count + missed_count
 
-                match_score = round((used_count / total_count) * 100, 1) if total_count else 0.0
+                match_score = (
+                    round(
+                        (used_count / total_count) * 100,
+                        1,
+                    )
+                    if total_count
+                    else 0.0
+                )
 
                 spoonacular_score_map[recipe.spoonacular_id] = (
                     used_count,
