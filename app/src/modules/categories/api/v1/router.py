@@ -1,6 +1,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Path
+from src.modules.auth.dependencies import JWTBearer
 from src.modules.categories.dependencies import get_food_category_service
 from src.modules.categories.schemas import FoodCategoryResponseSchema
 from src.modules.categories.services import FoodCategoryService
@@ -14,6 +15,7 @@ router = APIRouter()
     summary='Get active food categories',
 )
 async def get_food_categories(
+    jwt_data: Annotated[dict, Depends(JWTBearer())],
     service: Annotated[FoodCategoryService, Depends(get_food_category_service)],
 ) -> list[FoodCategoryResponseSchema]:
     return await service.get_active_categories()
@@ -32,6 +34,7 @@ async def get_food_category_by_id(
             description='MongoDB food category id',
         ),
     ],
+    jwt_data: Annotated[dict, Depends(JWTBearer())],
     service: Annotated[FoodCategoryService, Depends(get_food_category_service)],
 ) -> FoodCategoryResponseSchema:
     return await service.get_category_by_id(category_id)
