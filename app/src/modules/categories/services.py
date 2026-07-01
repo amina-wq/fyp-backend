@@ -1,7 +1,12 @@
+import uuid
 from datetime import UTC, datetime
+from urllib.parse import urlparse
 
+import boto3
 from beanie import PydanticObjectId
-from fastapi import HTTPException, status
+from botocore.exceptions import BotoCoreError, ClientError
+from fastapi import HTTPException, UploadFile, status
+from src.core.config import settings
 from src.modules.categories.models import FoodCategory
 from src.modules.categories.schemas import (
     FoodCategoryCreateSchema,
@@ -9,8 +14,143 @@ from src.modules.categories.schemas import (
     FoodCategoryUpdateSchema,
 )
 
+ALLOWED_ICON_TYPES = {
+    'image/jpeg': '.jpg',
+    'image/png': '.png',
+    'image/webp': '.webp',
+}
+
+MAX_ICON_SIZE = 2 * 1024 * 1024
+
+S3_CATEGORY_ICONS_PREFIX = 'category_icons'
+
 
 class FoodCategoryService:
+    def __init__(self):
+        s3_client_kwargs = {
+            'region_name': settings.AWS_REGION,
+        }
+
+        if settings.AWS_ACCESS_KEY_ID and settings.AWS_SECRET_ACCESS_KEY:
+            s3_client_kwargs['aws_access_key_id'] = settings.AWS_ACCESS_KEY_ID
+            s3_client_kwargs['aws_secret_access_key'] = settings.AWS_SECRET_ACCESS_KEY
+
+        self.s3_client = boto3.client(
+            's3',
+            **s3_client_kwargs,
+        )
+
+    def _build_s3_icon_key(
+        self,
+        category_id: str,
+        extension: str,
+    ) -> str:
+        return f'{S3_CATEGORY_ICONS_PREFIX}/{category_id}_{uuid.uuid4().hex}{extension}'
+
+    def _build_s3_public_url(self, object_key: str) -> str:
+        base_url = settings.AWS_S3_PUBLIC_BASE_URL.rstrip('/')
+
+        return f'{base_url}/{object_key}'
+
+    def _extract_s3_key_from_url(self, icon_url: str | None) -> str | None:
+        if not icon_url:
+            return None
+
+        base_url = settings.AWS_S3_PUBLIC_BASE_URL.rstrip('/')
+
+        if not icon_url.startswith(base_url):
+            return None
+
+        parsed_url = urlparse(icon_url)
+        object_key = parsed_url.path.lstrip('/')
+
+        if not object_key.startswith(f'{S3_CATEGORY_ICONS_PREFIX}/'):
+            return None
+
+        return object_key
+
+    def _delete_s3_icon_if_exists(self, icon_url: str | None) -> None:
+        object_key = self._extract_s3_key_from_url(icon_url)
+
+        if object_key is None:
+            return
+
+        try:
+            self.s3_client.delete_object(
+                Bucket=settings.AWS_S3_BUCKET_NAME,
+                Key=object_key,
+            )
+        except (BotoCoreError, ClientError):
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail='Failed to delete old category icon from S3',
+            )
+
+    async def upload_category_icon(
+        self,
+        category_id: str,
+        icon: UploadFile,
+    ) -> FoodCategoryResponseSchema:
+        try:
+            category_object_id = PydanticObjectId(category_id)
+        except Exception:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail='Invalid category id',
+            )
+
+        category = await FoodCategory.get(category_object_id)
+
+        if not category:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail='Category not found',
+            )
+
+        content_type = icon.content_type
+
+        if content_type is None or content_type not in ALLOWED_ICON_TYPES:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail='Only JPEG, PNG and WEBP icons are allowed',
+            )
+
+        content = await icon.read()
+
+        if len(content) > MAX_ICON_SIZE:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail='Icon size must be less than 2MB',
+            )
+
+        extension = ALLOWED_ICON_TYPES[content_type]
+        object_key = self._build_s3_icon_key(
+            category_id=str(category.id),
+            extension=extension,
+        )
+
+        try:
+            self.s3_client.put_object(
+                Bucket=settings.AWS_S3_BUCKET_NAME,
+                Key=object_key,
+                Body=content,
+                ContentType=content_type,
+            )
+        except (BotoCoreError, ClientError):
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail='Failed to upload category icon to S3',
+            )
+
+        self._delete_s3_icon_if_exists(category.icon_url)
+
+        category.icon_url = self._build_s3_public_url(object_key)
+        category.updated_at = datetime.now(UTC)
+
+        await category.save()
+
+        return self._to_response(category)
+
     def _to_response(
         self,
         category: FoodCategory,

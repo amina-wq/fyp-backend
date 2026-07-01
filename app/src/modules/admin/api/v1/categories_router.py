@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Path, status
+from fastapi import APIRouter, Depends, File, Path, UploadFile, status
 from src.modules.auth.dependencies import get_current_admin_user
 from src.modules.auth.models import User
 from src.modules.categories.dependencies import get_food_category_service
@@ -80,3 +80,26 @@ async def deactivate_food_category(
     service: Annotated[FoodCategoryService, Depends(get_food_category_service)],
 ) -> dict[str, str]:
     return await service.deactivate_category(category_id)
+
+
+@router.post(
+    '/categories/{category_id}/icon',
+    response_model=FoodCategoryResponseSchema,
+    summary='Admin: upload food category icon',
+)
+async def upload_food_category_icon(
+    category_id: Annotated[
+        str,
+        Path(
+            min_length=1,
+            description='MongoDB food category id',
+        ),
+    ],
+    icon: Annotated[UploadFile, File()],
+    current_admin: Annotated[User, Depends(get_current_admin_user)],
+    service: Annotated[FoodCategoryService, Depends(get_food_category_service)],
+) -> FoodCategoryResponseSchema:
+    return await service.upload_category_icon(
+        category_id=category_id,
+        icon=icon,
+    )
