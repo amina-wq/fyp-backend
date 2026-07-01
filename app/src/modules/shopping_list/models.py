@@ -4,7 +4,6 @@ from typing import Annotated
 
 from beanie import Document, Indexed, PydanticObjectId
 from pydantic import Field
-from src.core.enums import FoodCategory
 from src.modules.inventory.models import InventoryUnits
 
 
@@ -16,7 +15,7 @@ class ShoppingListSource(str, Enum):
 class ShoppingListItem(Document):
     user_id: Annotated[PydanticObjectId, Indexed()]
     name: str = Field(..., min_length=1, max_length=100)
-    category: FoodCategory = FoodCategory.OTHER
+    category_id: PydanticObjectId
     amount: float | None = Field(default=None, gt=0)
     unit: InventoryUnits | None = None
     is_checked: bool = False

@@ -4,7 +4,6 @@ from typing import Annotated
 
 from beanie import Document, Indexed, PydanticObjectId
 from pydantic import BaseModel, Field
-from src.core.enums import FoodCategory
 
 
 class StorageLocation(str, Enum):
@@ -46,7 +45,7 @@ class InventoryItem(Document):
     product_id: PydanticObjectId | None = None
     barcode: str | None = None
     custom_name: str | None = None
-    category: FoodCategory = FoodCategory.OTHER
+    category_id: PydanticObjectId
     notes: str | None = None
     item_image_url: str | None = None
     location: StorageLocation = StorageLocation.FRIDGE

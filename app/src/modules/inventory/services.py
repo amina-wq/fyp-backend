@@ -7,8 +7,8 @@ from beanie import PydanticObjectId
 from botocore.exceptions import BotoCoreError, ClientError
 from fastapi import HTTPException, UploadFile, status
 from src.core.config import settings
-from src.core.enums import FoodCategory
 from src.modules.auth.models import User
+from src.modules.categories.services import FoodCategoryService
 from src.modules.inventory.models import InventoryItem, InventoryStatus, ScheduledNotification
 from src.modules.inventory.schemas import (
     ExpiryState,
@@ -32,6 +32,7 @@ S3_INVENTORY_ITEMS_PREFIX = 'inventory_items'
 class InventoryService:
     def __init__(self):
         self.product_service = ProductService()
+        self.category_service = FoodCategoryService()
 
         s3_client_kwargs = {
             'region_name': settings.AWS_REGION,
@@ -187,6 +188,11 @@ class InventoryService:
         )
         expiry_state = self._calculate_expiry_state(item.expiration_date)
 
+        category = await self.category_service.get_category_document_by_id(
+            category_id=str(item.category_id),
+            active_only=False,
+        )
+
         return InventoryItemResponseSchema(
             id=str(item.id),
             user_id=str(item.user_id),
@@ -195,7 +201,7 @@ class InventoryService:
             custom_name=item.custom_name,
             display_name=display_name,
             item_image_url=item.item_image_url,
-            category=item.category,
+            category=self.category_service._to_nested_response(category),
             notes=item.notes,
             location=item.location,
             amount=item.amount,
@@ -293,12 +299,17 @@ class InventoryService:
             notification_days_before=user.notification_days_before,
         )
 
+        category = await self.category_service.get_category_document_by_id(
+            category_id=data.category_id,
+            active_only=True,
+        )
+
         item = InventoryItem(
             user_id=user_object_id,
             product_id=product_object_id,
             barcode=barcode,
             custom_name=data.custom_name,
-            category=data.category,
+            category_id=category.id,
             notes=data.notes,
             item_image_url=data.item_image_url,
             location=data.location,
@@ -316,7 +327,7 @@ class InventoryService:
     async def get_items(
         self,
         user_id: str,
-        category: FoodCategory | None = None,
+        category_id: str | None = None,
         expiry_state: ExpiryState | None = None,
     ) -> list[InventoryItemResponseSchema]:
         try:
@@ -332,8 +343,12 @@ class InventoryService:
             InventoryItem.status == InventoryStatus.ACTIVE,
         ]
 
-        if category:
-            query.append(InventoryItem.category == category)
+        if category_id:
+            category = await self.category_service.get_category_document_by_id(
+                category_id=category_id,
+                active_only=False,
+            )
+            query.append(InventoryItem.category_id == category.id)
 
         items = await InventoryItem.find(*query).sort('-added_at').to_list()
 
@@ -373,6 +388,13 @@ class InventoryService:
         )
 
         update_data = data.model_dump(exclude_none=True)
+
+        if 'category_id' in update_data:
+            category = await self.category_service.get_category_document_by_id(
+                category_id=update_data['category_id'],
+                active_only=True,
+            )
+            update_data['category_id'] = category.id
 
         if not update_data:
             raise HTTPException(

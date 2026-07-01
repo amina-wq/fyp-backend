@@ -10,6 +10,7 @@ from src.core.config import settings
 from src.modules.categories.models import FoodCategory
 from src.modules.categories.schemas import (
     FoodCategoryCreateSchema,
+    FoodCategoryNestedSchema,
     FoodCategoryResponseSchema,
     FoodCategoryUpdateSchema,
 )
@@ -309,3 +310,48 @@ class FoodCategoryService:
         await category.save()
 
         return {'detail': 'Category deactivated'}
+
+    def _to_nested_response(
+        self,
+        category: FoodCategory,
+    ) -> FoodCategoryNestedSchema:
+        return FoodCategoryNestedSchema(
+            id=str(category.id),
+            key=category.key,
+            name=category.name,
+            description=category.description,
+            icon_url=category.icon_url,
+            color_hex=category.color_hex,
+            is_active=category.is_active,
+            is_default=category.is_default,
+            sort_order=category.sort_order,
+        )
+
+    async def get_category_document_by_id(
+        self,
+        category_id: str,
+        active_only: bool = True,
+    ) -> FoodCategory:
+        try:
+            category_object_id = PydanticObjectId(category_id)
+        except Exception:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail='Invalid category id',
+            )
+
+        category = await FoodCategory.get(category_object_id)
+
+        if not category:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail='Category not found',
+            )
+
+        if active_only and not category.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail='Category is inactive',
+            )
+
+        return category

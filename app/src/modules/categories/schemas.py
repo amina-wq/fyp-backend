@@ -3,6 +3,18 @@ from datetime import datetime
 from pydantic import BaseModel, Field
 
 
+class FoodCategoryNestedSchema(BaseModel):
+    id: str
+    key: str
+    name: str
+    description: str | None = None
+    icon_url: str | None = None
+    color_hex: str | None = None
+    is_active: bool
+    is_default: bool
+    sort_order: int
+
+
 class FoodCategoryResponseSchema(BaseModel):
     id: str
     key: str
