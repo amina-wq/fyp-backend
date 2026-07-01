@@ -136,10 +136,10 @@ class FoodCategoryService:
                 Body=content,
                 ContentType=content_type,
             )
-        except (BotoCoreError, ClientError):
+        except (BotoCoreError, ClientError) as error:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail='Failed to upload category icon to S3',
+                detail=f'Failed to upload category icon to S3: {error}',
             )
 
         self._delete_s3_icon_if_exists(category.icon_url)
