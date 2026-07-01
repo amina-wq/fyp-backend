@@ -12,11 +12,17 @@ class AccountType(str, Enum):
     FAMILY = 'family'
 
 
+class UserRole(str, Enum):
+    USER = 'user'
+    ADMIN = 'admin'
+
+
 class User(Document):
     name: str
     email: Annotated[EmailStr, Indexed(unique=True)]
     hashed_password: str
     is_active: bool = True
+    role: UserRole = UserRole.USER
     fcm_token: str | None = None
     notification_days_before: list[int] = Field(default_factory=lambda: [3, 1])
     account_type: AccountType = AccountType.PERSONAL
