@@ -5,6 +5,8 @@ from pymongo import AsyncMongoClient
 from pymongo.asynchronous.database import AsyncDatabase
 from src.core.config import settings
 from src.modules.auth.models import User
+from src.modules.categories.models import FoodCategory
+from src.modules.categories.seed import seed_default_categories
 from src.modules.ingredients.models import IngredientNormalization
 from src.modules.inventory.models import InventoryItem
 from src.modules.products.models import Product
@@ -40,8 +42,11 @@ async def init_database() -> None:
             Recipe,
             RecipeQuery,
             IngredientNormalization,
+            FoodCategory,
         ],
     )
+
+    await seed_default_categories()
 
     logger.info('Database initialization completed')
 

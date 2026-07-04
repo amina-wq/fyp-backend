@@ -1,7 +1,6 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, Path, Query, UploadFile, status
-from src.core.enums import FoodCategory
 from src.modules.auth.dependencies import JWTBearer
 from src.modules.inventory.dependencies import get_inventory_service
 from src.modules.inventory.schemas import (
@@ -41,12 +40,12 @@ async def create_inventory_item(
 async def get_inventory_items(
     jwt_data: Annotated[dict, Depends(JWTBearer())],
     service: Annotated[InventoryService, Depends(get_inventory_service)],
-    category: Annotated[FoodCategory | None, Query()] = None,
+    category_id: Annotated[str | None, Query()] = None,
     expiry_state: Annotated[ExpiryState | None, Query()] = None,
 ) -> list[InventoryItemResponseSchema]:
     return await service.get_items(
         user_id=jwt_data['sub'],
-        category=category,
+        category_id=category_id,
         expiry_state=expiry_state,
     )
 

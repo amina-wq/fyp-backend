@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from pydantic import BaseModel, EmailStr, Field
-from src.modules.auth.models import AccountType
+from src.modules.auth.models import AccountType, UserRole
 
 
 class UserRegisterSchema(BaseModel):
@@ -20,6 +20,7 @@ class UserResponseSchema(BaseModel):
     name: str
     email: EmailStr
     is_active: bool
+    role: UserRole
     fcm_token: str | None = None
     notification_days_before: list[int]
     account_type: AccountType

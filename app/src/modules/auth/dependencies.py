@@ -5,7 +5,7 @@ from beanie import PydanticObjectId
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from src.core.security import validate_jwt
-from src.modules.auth.models import User
+from src.modules.auth.models import User, UserRole
 from src.modules.auth.services import AuthService
 
 logger = logging.getLogger(__name__)
@@ -77,6 +77,18 @@ async def get_current_user(
         )
 
     return user
+
+
+async def get_current_admin_user(
+    current_user: User = Depends(get_current_user),
+) -> User:
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='Admin access required',
+        )
+
+    return current_user
 
 
 def get_auth_service() -> AuthService:

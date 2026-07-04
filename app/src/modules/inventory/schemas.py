@@ -3,7 +3,7 @@ from enum import Enum
 from typing import Annotated
 
 from pydantic import BaseModel, Field, model_validator
-from src.core.enums import FoodCategory
+from src.modules.categories.schemas import FoodCategoryNestedSchema
 from src.modules.inventory.models import InventoryStatus, InventoryUnits, ScheduledNotification, StorageLocation
 
 
@@ -17,7 +17,7 @@ class InventoryItemCreateSchema(BaseModel):
     product_id: str | None = None
     barcode: Annotated[str | None, Field(default=None, max_length=50)] = None
     custom_name: Annotated[str | None, Field(default=None, max_length=150)] | None = None
-    category: FoodCategory = FoodCategory.OTHER
+    category_id: str
     notes: Annotated[str | None, Field(default=None, max_length=500)] | None = None
     item_image_url: str | None = None
     location: StorageLocation = StorageLocation.FRIDGE
@@ -35,7 +35,7 @@ class InventoryItemCreateSchema(BaseModel):
 
 class InventoryItemUpdateSchema(BaseModel):
     custom_name: Annotated[str | None, Field(default=None, max_length=150)] = None
-    category: FoodCategory | None = None
+    category_id: str | None = None
     notes: Annotated[str | None, Field(default=None, max_length=500)] = None
     item_image_url: str | None = None
     location: StorageLocation | None = None
@@ -54,7 +54,7 @@ class InventoryItemResponseSchema(BaseModel):
     item_image_url: str | None = None
     product_image_url: str | None = None
     product_brand: str | None = None
-    category: FoodCategory
+    category: FoodCategoryNestedSchema
     notes: str | None = None
     location: StorageLocation
     amount: float

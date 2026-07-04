@@ -1,5 +1,7 @@
 from fastapi import APIRouter
+from src.modules.admin.api.v1.categories_router import router as admin_categories_router
 from src.modules.auth.api.v1.router import router as auth_router
+from src.modules.categories.api.v1.router import router as categories_router
 from src.modules.inventory.api.v1.router import router as inventory_router
 from src.modules.products.api.v1.router import router as products_router
 from src.modules.recipes.api.v1.router import router as recipes_router
@@ -13,10 +15,25 @@ router.include_router(
     tags=['Auth'],
 )
 
+
+router.include_router(
+    admin_categories_router,
+    prefix='/admin',
+    tags=['Admin Categories'],
+)
+
+
 router.include_router(
     products_router,
     prefix='/products',
     tags=['Products'],
+)
+
+
+router.include_router(
+    categories_router,
+    prefix='/categories',
+    tags=['Categories'],
 )
 
 

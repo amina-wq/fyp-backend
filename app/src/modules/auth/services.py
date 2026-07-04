@@ -107,6 +107,7 @@ class AuthService:
             name=user.name,
             email=user.email,
             is_active=user.is_active,
+            role=user.role,
             fcm_token=user.fcm_token,
             notification_days_before=user.notification_days_before,
             account_type=user.account_type,
