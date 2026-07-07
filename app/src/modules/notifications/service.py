@@ -103,11 +103,18 @@ class NotificationService:
         notifications: list[ScheduledNotification],
         now: datetime,
     ) -> list[ScheduledNotification]:
-        return [
-            notification
-            for notification in notifications
-            if not notification.is_sent and notification.scheduled_for <= now
-        ]
+        due_notifications: list[ScheduledNotification] = []
+
+        for notification in notifications:
+            scheduled_for = notification.scheduled_for
+
+            if scheduled_for.tzinfo is None:
+                scheduled_for = scheduled_for.replace(tzinfo=UTC)
+
+            if not notification.is_sent and scheduled_for <= now:
+                due_notifications.append(notification)
+
+        return due_notifications
 
     def _mark_notifications_as_sent(
         self,
