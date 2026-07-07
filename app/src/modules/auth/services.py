@@ -1,3 +1,5 @@
+from datetime import UTC, datetime
+
 from beanie import PydanticObjectId
 from fastapi import HTTPException, status
 from src.core.security import (
@@ -9,11 +11,14 @@ from src.core.security import (
 )
 from src.modules.auth.models import User
 from src.modules.auth.schemas import (
+    FCMTokenUpdateSchema,
     RefreshTokenRequestSchema,
     TokenResponseSchema,
     UserLoginSchema,
     UserRegisterSchema,
     UserResponseSchema,
+    UserSettingsUpdateSchema,
+    UserUpdateNameSchema,
 )
 
 
@@ -101,6 +106,52 @@ class AuthService:
         return cls._create_tokens(user)
 
     @classmethod
+    async def update_user_name(
+        cls,
+        user: User,
+        data: UserUpdateNameSchema,
+    ) -> UserResponseSchema:
+        user.name = data.name
+        user.updated_at = datetime.now(UTC)
+
+        await user.save()
+
+        return cls.build_user_response(user)
+
+    @classmethod
+    async def update_user_settings(
+        cls,
+        user: User,
+        data: UserSettingsUpdateSchema,
+    ) -> UserResponseSchema:
+        update_data = data.model_dump(exclude_none=True)
+
+        if not update_data:
+            return cls.build_user_response(user)
+
+        for field_name, field_value in update_data.items():
+            setattr(user, field_name, field_value)
+
+        user.updated_at = datetime.now(UTC)
+
+        await user.save()
+
+        return cls.build_user_response(user)
+
+    @classmethod
+    async def update_fcm_token(
+        cls,
+        user: User,
+        data: FCMTokenUpdateSchema,
+    ) -> UserResponseSchema:
+        user.fcm_token = data.fcm_token
+        user.updated_at = datetime.now(UTC)
+
+        await user.save()
+
+        return cls.build_user_response(user)
+
+    @classmethod
     def build_user_response(cls, user: User) -> UserResponseSchema:
         return UserResponseSchema(
             user_id=str(user.id),
@@ -110,6 +161,8 @@ class AuthService:
             role=user.role,
             fcm_token=user.fcm_token,
             notification_days_before=user.notification_days_before,
+            expiry_notifications_enabled=user.expiry_notifications_enabled,
+            theme_mode=user.theme_mode,
             account_type=user.account_type,
             created_at=user.created_at,
             updated_at=user.updated_at,

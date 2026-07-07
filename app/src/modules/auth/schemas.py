@@ -1,7 +1,10 @@
 from datetime import datetime
+from typing import Annotated
 
-from pydantic import BaseModel, EmailStr, Field
-from src.modules.auth.models import AccountType, UserRole
+from pydantic import BaseModel, EmailStr, Field, field_validator
+from src.modules.auth.models import AccountType, ThemeMode, UserRole
+
+ALLOWED_NOTIFICATION_DAYS = {0, 1, 3, 5, 7}
 
 
 class UserRegisterSchema(BaseModel):
@@ -15,6 +18,39 @@ class UserLoginSchema(BaseModel):
     password: str
 
 
+class UserUpdateNameSchema(BaseModel):
+    name: str = Field(min_length=2, max_length=100)
+
+
+class UserSettingsUpdateSchema(BaseModel):
+    notification_days_before: Annotated[
+        list[int] | None,
+        Field(default=None, min_length=1),
+    ] = None
+    expiry_notifications_enabled: bool | None = None
+    theme_mode: ThemeMode | None = None
+
+    @field_validator('notification_days_before')
+    @classmethod
+    def validate_notification_days_before(cls, value: list[int] | None) -> list[int] | None:
+        if value is None:
+            return value
+
+        unique_days = sorted(set(value), reverse=True)
+
+        for day in unique_days:
+            if day not in ALLOWED_NOTIFICATION_DAYS:
+                raise ValueError(
+                    'Notification days must be one of: 0, 1, 3, 5, 7',
+                )
+
+        return unique_days
+
+
+class FCMTokenUpdateSchema(BaseModel):
+    fcm_token: str | None = Field(default=None, max_length=500)
+
+
 class UserResponseSchema(BaseModel):
     user_id: str
     name: str
@@ -23,6 +59,8 @@ class UserResponseSchema(BaseModel):
     role: UserRole
     fcm_token: str | None = None
     notification_days_before: list[int]
+    expiry_notifications_enabled: bool
+    theme_mode: ThemeMode
     account_type: AccountType
     created_at: datetime
     updated_at: datetime
