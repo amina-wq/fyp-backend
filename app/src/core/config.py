@@ -30,6 +30,9 @@ class Settings(BaseSettings):
     SPOONACULAR_API_KEY: str | None = None
     GEMINI_API_KEY: str | None = None
 
+    FIREBASE_CREDENTIALS_PATH: str | None = None
+    NOTIFICATION_WORKER_INTERVAL_SECONDS: int = 900
+
     model_config = SettingsConfigDict(
         env_file=ENV_FILE,
         extra='ignore',
