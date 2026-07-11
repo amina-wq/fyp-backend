@@ -9,6 +9,7 @@ from src.api.v1.router import router as api_v1_router
 from src.core.config import settings
 from src.core.logger import setup_logging
 from src.database.data_storage import close_database, init_database
+from src.modules.categories.seed import seed_default_categories
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +20,7 @@ setup_logging()
 async def lifespan(app: FastAPI):
     logger.info('Starting FoodTrack API')
     await init_database()
+    await seed_default_categories()
     logger.info('Application startup completed')
 
     yield

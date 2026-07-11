@@ -110,23 +110,29 @@ class InventoryService:
         notification_days_before: list[int],
     ) -> list[ScheduledNotification]:
         now = datetime.now(UTC)
+        today = now.date()
         notifications: list[ScheduledNotification] = []
 
         for days_before in notification_days_before:
             scheduled_date = expiration_date - timedelta(days=days_before)
+
+            if scheduled_date < today:
+                continue
+
             scheduled_for = datetime.combine(
                 scheduled_date,
                 datetime.min.time(),
                 tzinfo=UTC,
             )
 
-            if scheduled_for > now:
-                notifications.append(
-                    ScheduledNotification(
-                        days_before=days_before,
-                        scheduled_for=scheduled_for,
-                    )
+            scheduled_for = max(now, scheduled_for)
+
+            notifications.append(
+                ScheduledNotification(
+                    days_before=days_before,
+                    scheduled_for=scheduled_for,
                 )
+            )
 
         return notifications
 
