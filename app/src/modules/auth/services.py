@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime, timedelta
 
 from beanie import PydanticObjectId
 from fastapi import HTTPException, status
@@ -20,6 +20,7 @@ from src.modules.auth.schemas import (
     UserSettingsUpdateSchema,
     UserUpdateNameSchema,
 )
+from src.modules.inventory.models import InventoryItem, InventoryStatus, ScheduledNotification
 
 
 class AuthService:
@@ -119,6 +120,62 @@ class AuthService:
         return cls.build_user_response(user)
 
     @classmethod
+    def _build_scheduled_notifications(
+        cls,
+        expiration_date: date,
+        notification_days_before: list[int],
+    ) -> list[ScheduledNotification]:
+        now = datetime.now(UTC)
+        today = now.date()
+        notifications: list[ScheduledNotification] = []
+
+        for days_before in notification_days_before:
+            scheduled_date = expiration_date - timedelta(days=days_before)
+
+            if scheduled_date < today:
+                continue
+
+            scheduled_for = datetime.combine(
+                scheduled_date,
+                datetime.min.time(),
+                tzinfo=UTC,
+            )
+
+            scheduled_for = max(now, scheduled_for)
+
+            notifications.append(
+                ScheduledNotification(
+                    days_before=days_before,
+                    scheduled_for=scheduled_for,
+                )
+            )
+
+        return notifications
+
+    @classmethod
+    async def _reschedule_inventory_notifications_for_user(
+        cls,
+        user: User,
+    ) -> None:
+        items = await InventoryItem.find(
+            InventoryItem.user_id == user.id,
+            InventoryItem.status == InventoryStatus.ACTIVE,
+        ).to_list()
+
+        for item in items:
+            if user.expiry_notifications_enabled:
+                item.scheduled_notifications = cls._build_scheduled_notifications(
+                    expiration_date=item.expiration_date,
+                    notification_days_before=user.notification_days_before,
+                )
+            else:
+                item.scheduled_notifications = []
+
+            item.updated_at = datetime.now(UTC)
+
+            await item.save()
+
+    @classmethod
     async def update_user_settings(
         cls,
         user: User,
@@ -129,12 +186,19 @@ class AuthService:
         if not update_data:
             return cls.build_user_response(user)
 
+        should_reschedule_notifications = (
+            'notification_days_before' in update_data or 'expiry_notifications_enabled' in update_data
+        )
+
         for field_name, field_value in update_data.items():
             setattr(user, field_name, field_value)
 
         user.updated_at = datetime.now(UTC)
 
         await user.save()
+
+        if should_reschedule_notifications:
+            await cls._reschedule_inventory_notifications_for_user(user)
 
         return cls.build_user_response(user)
 

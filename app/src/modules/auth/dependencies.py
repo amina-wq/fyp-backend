@@ -35,7 +35,7 @@ class JWTBearer(HTTPBearer):
         token = str(credentials.credentials)
 
         try:
-            payload = validate_jwt(token)
+            payload = validate_jwt(token, expected_type='access')
         except ValueError:
             logger.warning('Authorization failed: invalid or expired token')
             raise HTTPException(
