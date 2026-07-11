@@ -294,10 +294,13 @@ class InventoryService:
             product_object_id = PydanticObjectId(product_response.id)
             barcode = product_response.barcode
 
-        scheduled_notifications = self._build_scheduled_notifications(
-            expiration_date=data.expiration_date,
-            notification_days_before=user.notification_days_before,
-        )
+        scheduled_notifications = []
+
+        if user.expiry_notifications_enabled:
+            scheduled_notifications = self._build_scheduled_notifications(
+                expiration_date=data.expiration_date,
+                notification_days_before=user.notification_days_before,
+            )
 
         category = await self.category_service.get_category_document_by_id(
             category_id=data.category_id,
@@ -414,10 +417,13 @@ class InventoryService:
                     detail='User not found',
                 )
 
-            item.scheduled_notifications = self._build_scheduled_notifications(
-                expiration_date=item.expiration_date,
-                notification_days_before=user.notification_days_before,
-            )
+            if user.expiry_notifications_enabled:
+                item.scheduled_notifications = self._build_scheduled_notifications(
+                    expiration_date=item.expiration_date,
+                    notification_days_before=user.notification_days_before,
+                )
+            else:
+                item.scheduled_notifications = []
 
         item.updated_at = datetime.now(UTC)
 

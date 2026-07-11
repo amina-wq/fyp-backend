@@ -16,6 +16,18 @@ services:
       mongodb:
         condition: service_started
 
+  notification-worker:
+    build: ./app
+    restart: always
+    env_file:
+      - .env
+    entrypoint: [ "sh", "worker_entrypoint.sh" ]
+    volumes:
+      - ./secrets/firebase-service-account.json:/run/secrets/firebase-service-account.json:ro
+    depends_on:
+      mongodb:
+        condition: service_started
+
   mongodb:
     image: mongo:7
     container_name: fyp-mongodb
