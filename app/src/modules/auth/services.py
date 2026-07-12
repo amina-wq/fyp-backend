@@ -13,6 +13,8 @@ from src.core.security import (
 from src.modules.auth.models import User
 from src.modules.auth.schemas import (
     FCMTokenUpdateSchema,
+    LogoutRequestSchema,
+    LogoutResponseSchema,
     RefreshTokenRequestSchema,
     TokenResponseSchema,
     UserLoginSchema,
@@ -21,6 +23,7 @@ from src.modules.auth.schemas import (
     UserSettingsUpdateSchema,
     UserUpdateNameSchema,
 )
+from src.modules.auth.token_blacklist import blacklist_token, is_token_blacklisted
 from src.modules.inventory.models import InventoryItem, InventoryStatus, ScheduledNotification
 
 logger = logging.getLogger(__name__)
@@ -103,6 +106,12 @@ class AuthService:
 
         user_id = payload['sub']
 
+        if await is_token_blacklisted(payload):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail='Refresh token has been revoked',
+            )
+
         user = await User.get(PydanticObjectId(user_id))
 
         if not user:
@@ -123,6 +132,37 @@ class AuthService:
         )
 
         return cls._create_tokens(user)
+
+    @classmethod
+    async def logout_user(
+        cls,
+        access_token: str,
+        data: LogoutRequestSchema,
+    ) -> LogoutResponseSchema:
+        try:
+            access_payload = validate_jwt(access_token, expected_type='access')
+            refresh_payload = validate_jwt(data.refresh_token, expected_type='refresh')
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail='Invalid or expired token',
+            )
+
+        if access_payload['sub'] != refresh_payload['sub']:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail='Token subject mismatch',
+            )
+
+        await blacklist_token(access_payload)
+        await blacklist_token(refresh_payload)
+
+        logger.info(
+            'User logged out: user_id=%s',
+            access_payload['sub'],
+        )
+
+        return LogoutResponseSchema(detail='Logged out successfully')
 
     @classmethod
     async def update_user_name(

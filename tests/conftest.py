@@ -18,6 +18,7 @@ os.environ.setdefault(
     'JWT_SECRET_KEY',
     'test_secret_key_for_foodtrack_backend_tests_32_chars_minimum',
 )
+os.environ.setdefault('REDIS_URL', 'redis://localhost:6379/1')
 os.environ.setdefault('JWT_ALGORITHM', 'HS256')
 os.environ.setdefault('JWT_ACCESS_TOKEN_EXPIRE_MINUTES', '60')
 os.environ.setdefault('JWT_REFRESH_TOKEN_EXPIRE_DAYS', '7')
@@ -40,6 +41,10 @@ async def app_client() -> AsyncGenerator[AsyncClient, None]:
             base_url='http://testserver',
         ) as client:
             yield client
+
+        from src.core.redis import redis_client  # noqa: PLC0415
+
+        await redis_client.flushdb()
 
         if db.client is not None:
             await db.client.drop_database(TEST_DB_NAME)

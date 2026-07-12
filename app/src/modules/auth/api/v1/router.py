@@ -1,10 +1,13 @@
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from src.modules.auth.dependencies import get_auth_service, get_current_user
 from src.modules.auth.models import User
 from src.modules.auth.schemas import (
     FCMTokenUpdateSchema,
+    LogoutRequestSchema,
+    LogoutResponseSchema,
     RefreshTokenRequestSchema,
     TokenResponseSchema,
     UserLoginSchema,
@@ -18,6 +21,8 @@ from src.modules.auth.services import AuthService
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+logout_bearer = HTTPBearer(auto_error=False)
 
 
 @router.post(
@@ -84,6 +89,34 @@ async def refresh_tokens(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail='Unexpected error occurred during token refresh',
         )
+
+
+@router.post(
+    path='/logout',
+    response_model=LogoutResponseSchema,
+    status_code=status.HTTP_200_OK,
+)
+async def logout_user(
+    data: LogoutRequestSchema,
+    credentials: HTTPAuthorizationCredentials | None = Depends(logout_bearer),
+    auth_service: AuthService = Depends(get_auth_service),
+) -> LogoutResponseSchema:
+    if credentials is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail='Authorization credentials were not provided',
+        )
+
+    if credentials.scheme.lower() != 'bearer':
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail='Invalid authentication scheme',
+        )
+
+    return await auth_service.logout_user(
+        access_token=str(credentials.credentials),
+        data=data,
+    )
 
 
 @router.get(

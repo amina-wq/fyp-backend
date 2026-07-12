@@ -90,3 +90,11 @@ class TokenResponseSchema(BaseModel):
 
 class RefreshTokenRequestSchema(BaseModel):
     refresh_token: str
+
+
+class LogoutRequestSchema(BaseModel):
+    refresh_token: str
+
+
+class LogoutResponseSchema(BaseModel):
+    detail: str

@@ -1,5 +1,6 @@
 from datetime import UTC, datetime, timedelta
 from typing import Any
+from uuid import uuid4
 
 import jwt
 from jwt import InvalidTokenError
@@ -24,6 +25,7 @@ def create_access_token(subject: str) -> str:
         'sub': subject,
         'exp': expire,
         'type': 'access',
+        'jti': uuid4().hex,
     }
 
     encoded_jwt = jwt.encode(
@@ -42,6 +44,7 @@ def create_refresh_token(subject: str) -> str:
         'sub': subject,
         'exp': expire,
         'type': 'refresh',
+        'jti': uuid4().hex,
     }
 
     return jwt.encode(

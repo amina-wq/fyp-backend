@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     MONGODB_URL: str
     MONGODB_DB_NAME: str = 'foodtrack_db'
 
+    REDIS_URL: str = 'redis://redis:6379/0'
+
     JWT_SECRET_KEY: str
     JWT_ALGORITHM: str = 'HS256'
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 60

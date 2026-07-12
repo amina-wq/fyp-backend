@@ -7,6 +7,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from src.core.security import validate_jwt
 from src.modules.auth.models import User, UserRole
 from src.modules.auth.services import AuthService
+from src.modules.auth.token_blacklist import is_token_blacklisted
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +42,14 @@ class JWTBearer(HTTPBearer):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail='Invalid or expired token',
+            )
+
+        if await is_token_blacklisted(payload):
+            logger.warning('Authorization failed: token has been revoked')
+
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail='Token has been revoked',
             )
 
         logger.info('JWT token validated successfully')
