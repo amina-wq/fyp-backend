@@ -1,6 +1,6 @@
 import logging
 import uuid
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta, timezone
 from urllib.parse import urlparse
 
 import boto3
@@ -20,6 +20,8 @@ from src.modules.inventory.schemas import (
 )
 from src.modules.products.models import Product
 from src.modules.products.services import ProductService
+
+APP_TIMEZONE = timezone(timedelta(hours=8))
 
 ALLOWED_IMAGE_TYPES = {
     'image/jpeg': '.jpg',
@@ -102,7 +104,7 @@ class InventoryService:
             )
 
     def _calculate_expiry_state(self, expiration_date: date) -> ExpiryState:
-        today = date.today()
+        today = datetime.now(APP_TIMEZONE).date()
 
         if expiration_date < today:
             return ExpiryState.EXPIRED
@@ -117,8 +119,9 @@ class InventoryService:
         expiration_date: date,
         notification_days_before: list[int],
     ) -> list[ScheduledNotification]:
+        local_now = datetime.now(APP_TIMEZONE)
+        today = local_now.date()
         now = datetime.now(UTC)
-        today = now.date()
         notifications: list[ScheduledNotification] = []
 
         for days_before in notification_days_before:
@@ -127,12 +130,13 @@ class InventoryService:
             if scheduled_date < today:
                 continue
 
-            scheduled_for = datetime.combine(
+            scheduled_for_local = datetime.combine(
                 scheduled_date,
                 datetime.min.time(),
-                tzinfo=UTC,
+                tzinfo=APP_TIMEZONE,
             )
 
+            scheduled_for = scheduled_for_local.astimezone(UTC)
             scheduled_for = max(now, scheduled_for)
 
             notifications.append(
@@ -519,7 +523,7 @@ class InventoryService:
                 detail='Invalid user id',
             )
 
-        today = date.today()
+        today = datetime.now(APP_TIMEZONE).date()
         tomorrow = today + timedelta(days=1)
         in_5_days = today + timedelta(days=5)
 
