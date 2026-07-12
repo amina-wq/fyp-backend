@@ -1,10 +1,20 @@
 import httpx
+from src.core.retry import retry_async
 
 OPEN_FOOD_FACTS_API_URL = 'https://world.openfoodfacts.org/api/v2'
 OPEN_FOOD_FACTS_USER_AGENT = 'FoodTrackFYP/1.0'
 
 OPEN_FOOD_FACTS_COUNTRY = 'my'
 OPEN_FOOD_FACTS_LANGUAGE = 'en'
+
+RETRYABLE_STATUS_CODES = {429, 500, 502, 503, 504}
+
+
+def _should_retry(error: BaseException) -> bool:
+    if isinstance(error, httpx.HTTPStatusError):
+        return error.response.status_code in RETRYABLE_STATUS_CODES
+
+    return isinstance(error, httpx.TimeoutException | httpx.TransportError)
 
 
 def _clean_tags(raw_tags: list[str]) -> list[str]:
@@ -49,13 +59,23 @@ async def fetch_product_by_barcode(barcode: str) -> dict | None:
     }
 
     async with httpx.AsyncClient(timeout=5.0) as client:
-        try:
+
+        async def _request() -> httpx.Response:
             response = await client.get(
                 url,
                 params=params,
                 headers=headers,
             )
             response.raise_for_status()
+            return response
+
+        try:
+            response = await retry_async(
+                _request,
+                attempts=3,
+                retry_exceptions=(httpx.HTTPError,),
+                should_retry=_should_retry,
+            )
             data = response.json()
         except httpx.HTTPError:
             return None

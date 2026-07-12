@@ -1,8 +1,18 @@
 import httpx
 from fastapi import HTTPException, status
 from src.core.config import settings
+from src.core.retry import retry_async
 
 SPOONACULAR_API_URL = 'https://api.spoonacular.com'
+
+RETRYABLE_STATUS_CODES = {429, 500, 502, 503, 504}
+
+
+def _should_retry(error: BaseException) -> bool:
+    if isinstance(error, httpx.HTTPStatusError):
+        return error.response.status_code in RETRYABLE_STATUS_CODES
+
+    return isinstance(error, httpx.TimeoutException | httpx.TransportError)
 
 
 class SpoonacularClient:
@@ -32,11 +42,21 @@ class SpoonacularClient:
 
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
-                response = await client.get(
-                    url,
-                    params=params,
+
+                async def _request() -> httpx.Response:
+                    response = await client.get(
+                        url,
+                        params=params,
+                    )
+                    response.raise_for_status()
+                    return response
+
+                response = await retry_async(
+                    _request,
+                    attempts=3,
+                    retry_exceptions=(httpx.HTTPError,),
+                    should_retry=_should_retry,
                 )
-                response.raise_for_status()
 
                 data = response.json()
 
@@ -68,11 +88,21 @@ class SpoonacularClient:
 
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
-                response = await client.get(
-                    url,
-                    params=params,
+
+                async def _request() -> httpx.Response:
+                    response = await client.get(
+                        url,
+                        params=params,
+                    )
+                    response.raise_for_status()
+                    return response
+
+                response = await retry_async(
+                    _request,
+                    attempts=3,
+                    retry_exceptions=(httpx.HTTPError,),
+                    should_retry=_should_retry,
                 )
-                response.raise_for_status()
 
                 data = response.json()
 

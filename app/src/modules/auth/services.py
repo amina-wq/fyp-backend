@@ -1,5 +1,5 @@
 import logging
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, datetime
 
 from beanie import PydanticObjectId
 from fastapi import HTTPException, status
@@ -24,7 +24,8 @@ from src.modules.auth.schemas import (
     UserUpdateNameSchema,
 )
 from src.modules.auth.token_blacklist import blacklist_token, is_token_blacklisted
-from src.modules.inventory.models import InventoryItem, InventoryStatus, ScheduledNotification
+from src.modules.inventory.models import InventoryItem, InventoryStatus
+from src.modules.notifications.scheduling import build_scheduled_notifications
 
 logger = logging.getLogger(__name__)
 
@@ -126,6 +127,8 @@ class AuthService:
                 detail='User account is inactive',
             )
 
+        await blacklist_token(payload)
+
         logger.info(
             'Token refreshed: user_id=%s',
             user.id,
@@ -178,39 +181,6 @@ class AuthService:
         return cls.build_user_response(user)
 
     @classmethod
-    def _build_scheduled_notifications(
-        cls,
-        expiration_date: date,
-        notification_days_before: list[int],
-    ) -> list[ScheduledNotification]:
-        now = datetime.now(UTC)
-        today = now.date()
-        notifications: list[ScheduledNotification] = []
-
-        for days_before in notification_days_before:
-            scheduled_date = expiration_date - timedelta(days=days_before)
-
-            if scheduled_date < today:
-                continue
-
-            scheduled_for = datetime.combine(
-                scheduled_date,
-                datetime.min.time(),
-                tzinfo=UTC,
-            )
-
-            scheduled_for = max(now, scheduled_for)
-
-            notifications.append(
-                ScheduledNotification(
-                    days_before=days_before,
-                    scheduled_for=scheduled_for,
-                )
-            )
-
-        return notifications
-
-    @classmethod
     async def _reschedule_inventory_notifications_for_user(
         cls,
         user: User,
@@ -222,7 +192,7 @@ class AuthService:
 
         for item in items:
             if user.expiry_notifications_enabled:
-                item.scheduled_notifications = cls._build_scheduled_notifications(
+                item.scheduled_notifications = build_scheduled_notifications(
                     expiration_date=item.expiration_date,
                     notification_days_before=user.notification_days_before,
                 )

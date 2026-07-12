@@ -1,6 +1,7 @@
 import logging
 from datetime import UTC, datetime
 
+from beanie import PydanticObjectId
 from src.core.firebase import FirebaseService
 from src.modules.auth.models import User
 from src.modules.inventory.models import InventoryItem, InventoryStatus, ScheduledNotification
@@ -22,6 +23,8 @@ class NotificationService:
             InventoryItem.status == InventoryStatus.ACTIVE,
         ).to_list()
 
+        users_by_id: dict[PydanticObjectId, User | None] = {}
+
         for item in items:
             due_notifications = self._get_due_notifications(
                 notifications=item.scheduled_notifications,
@@ -33,7 +36,10 @@ class NotificationService:
 
             processed_count += len(due_notifications)
 
-            user = await User.get(item.user_id)
+            if item.user_id not in users_by_id:
+                users_by_id[item.user_id] = await User.get(item.user_id)
+
+            user = users_by_id[item.user_id]
 
             if not user:
                 skipped_count += len(due_notifications)
@@ -69,6 +75,8 @@ class NotificationService:
                     skipped_count += 1
                     notification.is_sent = True
                     notification.sent_at = now
+                    item.updated_at = now
+                    await item.save()
                     logger.info(
                         'Notification skipped because FCM token is missing: item_id=%s user_id=%s days_before=%s',
                         item.id,
@@ -95,6 +103,8 @@ class NotificationService:
                     sent_count += 1
                     notification.is_sent = True
                     notification.sent_at = now
+                    item.updated_at = now
+                    await item.save()
                     logger.info(
                         'Notification sent: item_id=%s user_id=%s days_before=%s',
                         item.id,
@@ -109,9 +119,6 @@ class NotificationService:
                         user.id,
                         notification.days_before,
                     )
-
-            item.updated_at = now
-            await item.save()
 
         if processed_count:
             logger.info(

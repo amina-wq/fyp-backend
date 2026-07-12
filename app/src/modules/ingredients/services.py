@@ -48,7 +48,7 @@ class IngredientNormalizationService:
         raw: str,
         tags: list[str] | None = None,
     ) -> str | None:
-        raw = raw.strip()
+        raw = raw.strip().lower()
 
         if not raw:
             return None

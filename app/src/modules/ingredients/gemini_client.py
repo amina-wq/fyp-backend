@@ -1,8 +1,10 @@
 from google import genai
 from google.genai import types
 from src.core.config import settings
+from src.core.retry import retry_async
 
 GEMINI_MODEL = 'gemini-2.5-flash-lite'
+GEMINI_TIMEOUT_MS = 10_000
 
 SYSTEM_PROMPT = """You are a food ingredient normalizer.
 Your task is to extract the core ingredient name in English from the given product name and tags.
@@ -49,16 +51,22 @@ class GeminiIngredientClient:
         user_message = f'Product: "{name}", tags: [{tags_str}]'
 
         try:
-            client = genai.Client(api_key=api_key)
+            client = genai.Client(
+                api_key=api_key,
+                http_options=types.HttpOptions(timeout=GEMINI_TIMEOUT_MS),
+            )
 
-            response = await client.aio.models.generate_content(
-                model=GEMINI_MODEL,
-                contents=user_message,
-                config=types.GenerateContentConfig(
-                    system_instruction=SYSTEM_PROMPT,
-                    temperature=0,
-                    max_output_tokens=20,
+            response = await retry_async(
+                lambda: client.aio.models.generate_content(
+                    model=GEMINI_MODEL,
+                    contents=user_message,
+                    config=types.GenerateContentConfig(
+                        system_instruction=SYSTEM_PROMPT,
+                        temperature=0,
+                        max_output_tokens=20,
+                    ),
                 ),
+                attempts=3,
             )
 
             if not response.text:

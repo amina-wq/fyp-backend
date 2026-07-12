@@ -1,3 +1,5 @@
+import asyncio
+import logging
 import uuid
 from datetime import UTC, datetime
 from urllib.parse import urlparse
@@ -24,6 +26,8 @@ ALLOWED_ICON_TYPES = {
 MAX_ICON_SIZE = 2 * 1024 * 1024
 
 S3_CATEGORY_ICONS_PREFIX = 'category_icons'
+
+logger = logging.getLogger(__name__)
 
 
 class FoodCategoryService:
@@ -70,18 +74,24 @@ class FoodCategoryService:
 
         return object_key
 
-    def _delete_s3_icon_if_exists(self, icon_url: str | None) -> None:
+    async def _delete_s3_icon_if_exists(self, icon_url: str | None) -> None:
         object_key = self._extract_s3_key_from_url(icon_url)
 
         if object_key is None:
             return
 
         try:
-            self.s3_client.delete_object(
+            await asyncio.to_thread(
+                self.s3_client.delete_object,
                 Bucket=settings.AWS_S3_BUCKET_NAME,
                 Key=object_key,
             )
         except (BotoCoreError, ClientError):
+            logger.exception(
+                'Failed to delete category icon from S3: object_key=%s',
+                object_key,
+            )
+
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail='Failed to delete old category icon from S3',
@@ -131,19 +141,28 @@ class FoodCategoryService:
         )
 
         try:
-            self.s3_client.put_object(
+            await asyncio.to_thread(
+                self.s3_client.put_object,
                 Bucket=settings.AWS_S3_BUCKET_NAME,
                 Key=object_key,
                 Body=content,
                 ContentType=content_type,
             )
-        except (BotoCoreError, ClientError) as error:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f'Failed to upload category icon to S3: {error}',
+        except (BotoCoreError, ClientError):
+            logger.exception(
+                'Failed to upload category icon to S3: category_id=%s object_key=%s content_type=%s size=%s',
+                category.id,
+                object_key,
+                content_type,
+                len(content),
             )
 
-        self._delete_s3_icon_if_exists(category.icon_url)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail='Failed to upload category icon to S3',
+            )
+
+        await self._delete_s3_icon_if_exists(category.icon_url)
 
         category.icon_url = self._build_s3_public_url(object_key)
         category.updated_at = datetime.now(UTC)

@@ -1,6 +1,7 @@
+import asyncio
 import logging
 import uuid
-from datetime import UTC, date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 from urllib.parse import urlparse
 
 import boto3
@@ -9,8 +10,9 @@ from botocore.exceptions import BotoCoreError, ClientError
 from fastapi import HTTPException, UploadFile, status
 from src.core.config import settings
 from src.modules.auth.models import User
+from src.modules.categories.models import FoodCategory
 from src.modules.categories.services import FoodCategoryService
-from src.modules.inventory.models import InventoryItem, InventoryStatus, ScheduledNotification
+from src.modules.inventory.models import InventoryItem, InventoryStatus
 from src.modules.inventory.schemas import (
     ExpiryState,
     InventoryItemCreateSchema,
@@ -18,10 +20,9 @@ from src.modules.inventory.schemas import (
     InventoryItemUpdateSchema,
     InventoryStatsResponseSchema,
 )
+from src.modules.notifications.scheduling import APP_TIMEZONE, build_scheduled_notifications
 from src.modules.products.models import Product
 from src.modules.products.services import ProductService
-
-APP_TIMEZONE = timezone(timedelta(hours=8))
 
 ALLOWED_IMAGE_TYPES = {
     'image/jpeg': '.jpg',
@@ -30,6 +31,8 @@ ALLOWED_IMAGE_TYPES = {
 }
 MAX_IMAGE_SIZE = 5 * 1024 * 1024
 S3_INVENTORY_ITEMS_PREFIX = 'inventory_items'
+
+_NOT_PROVIDED = object()
 
 logger = logging.getLogger(__name__)
 
@@ -81,14 +84,15 @@ class InventoryService:
 
         return object_key
 
-    def _delete_s3_image_if_exists(self, image_url: str | None) -> None:
+    async def _delete_s3_image_if_exists(self, image_url: str | None) -> None:
         object_key = self._extract_s3_key_from_url(image_url)
 
         if object_key is None:
             return
 
         try:
-            self.s3_client.delete_object(
+            await asyncio.to_thread(
+                self.s3_client.delete_object,
                 Bucket=settings.AWS_S3_BUCKET_NAME,
                 Key=object_key,
             )
@@ -113,40 +117,6 @@ class InventoryService:
             return ExpiryState.EXPIRING
 
         return ExpiryState.FRESH
-
-    def _build_scheduled_notifications(
-        self,
-        expiration_date: date,
-        notification_days_before: list[int],
-    ) -> list[ScheduledNotification]:
-        local_now = datetime.now(APP_TIMEZONE)
-        today = local_now.date()
-        now = datetime.now(UTC)
-        notifications: list[ScheduledNotification] = []
-
-        for days_before in notification_days_before:
-            scheduled_date = expiration_date - timedelta(days=days_before)
-
-            if scheduled_date < today:
-                continue
-
-            scheduled_for_local = datetime.combine(
-                scheduled_date,
-                datetime.min.time(),
-                tzinfo=APP_TIMEZONE,
-            )
-
-            scheduled_for = scheduled_for_local.astimezone(UTC)
-            scheduled_for = max(now, scheduled_for)
-
-            notifications.append(
-                ScheduledNotification(
-                    days_before=days_before,
-                    scheduled_for=scheduled_for,
-                )
-            )
-
-        return notifications
 
     async def _get_user_item_or_404(
         self,
@@ -198,18 +168,26 @@ class InventoryService:
 
         return 'Unnamed product'
 
-    async def _to_response(self, item: InventoryItem) -> InventoryItemResponseSchema:
-        product = await self._get_product_for_item(item)
+    async def _to_response(
+        self,
+        item: InventoryItem,
+        product: Product | None = _NOT_PROVIDED,
+        category: FoodCategory | None = None,
+    ) -> InventoryItemResponseSchema:
+        if product is _NOT_PROVIDED:
+            product = await self._get_product_for_item(item)
+
         display_name = await self._get_product_display_name(
             item=item,
             product=product,
         )
         expiry_state = self._calculate_expiry_state(item.expiration_date)
 
-        category = await self.category_service.get_category_document_by_id(
-            category_id=str(item.category_id),
-            active_only=False,
-        )
+        if category is None:
+            category = await self.category_service.get_category_document_by_id(
+                category_id=str(item.category_id),
+                active_only=False,
+            )
 
         return InventoryItemResponseSchema(
             id=str(item.id),
@@ -322,7 +300,7 @@ class InventoryService:
         scheduled_notifications = []
 
         if user.expiry_notifications_enabled:
-            scheduled_notifications = self._build_scheduled_notifications(
+            scheduled_notifications = build_scheduled_notifications(
                 expiration_date=data.expiration_date,
                 notification_days_before=user.notification_days_before,
             )
@@ -389,10 +367,22 @@ class InventoryService:
 
         items = await InventoryItem.find(*query).sort('-added_at').to_list()
 
+        product_ids = [item.product_id for item in items if item.product_id]
+        products = await Product.find({'_id': {'$in': product_ids}}).to_list() if product_ids else []
+        product_map = {product.id: product for product in products}
+
+        category_ids = list({item.category_id for item in items})
+        categories = await FoodCategory.find({'_id': {'$in': category_ids}}).to_list() if category_ids else []
+        category_map = {category.id: category for category in categories}
+
         response_items: list[InventoryItemResponseSchema] = []
 
         for item in items:
-            response_item = await self._to_response(item)
+            response_item = await self._to_response(
+                item,
+                product=product_map.get(item.product_id) if item.product_id else None,
+                category=category_map.get(item.category_id),
+            )
 
             if expiry_state and response_item.expiry_state != expiry_state:
                 continue
@@ -452,7 +442,7 @@ class InventoryService:
                 )
 
             if user.expiry_notifications_enabled:
-                item.scheduled_notifications = self._build_scheduled_notifications(
+                item.scheduled_notifications = build_scheduled_notifications(
                     expiration_date=item.expiration_date,
                     notification_days_before=user.notification_days_before,
                 )
@@ -591,7 +581,8 @@ class InventoryService:
         )
 
         try:
-            self.s3_client.put_object(
+            await asyncio.to_thread(
+                self.s3_client.put_object,
                 Bucket=settings.AWS_S3_BUCKET_NAME,
                 Key=object_key,
                 Body=content,
@@ -621,7 +612,7 @@ class InventoryService:
 
         await item.save()
 
-        self._delete_s3_image_if_exists(old_image_url)
+        await self._delete_s3_image_if_exists(old_image_url)
 
         logger.info(
             'Inventory item image uploaded: user_id=%s item_id=%s content_type=%s size=%s',
@@ -650,7 +641,7 @@ class InventoryService:
 
         await item.save()
 
-        self._delete_s3_image_if_exists(old_image_url)
+        await self._delete_s3_image_if_exists(old_image_url)
 
         logger.info(
             'Inventory item image deleted: user_id=%s item_id=%s had_image=%s',

@@ -1,3 +1,4 @@
+import asyncio
 import re
 from datetime import UTC, datetime
 
@@ -192,12 +193,26 @@ class RecipeService:
     def _extract_missed_ingredient_count(self, recipe_data: dict) -> int:
         return len(recipe_data.get('missedIngredients', []))
 
-    async def _get_inventory_item_name_and_tags(
+    async def _get_product_map(
+        self,
+        items: list[InventoryItem],
+    ) -> dict[PydanticObjectId, Product]:
+        product_ids = [item.product_id for item in items if item.product_id]
+
+        if not product_ids:
+            return {}
+
+        products = await Product.find({'_id': {'$in': product_ids}}).to_list()
+
+        return {product.id: product for product in products}
+
+    def _get_inventory_item_name_and_tags(
         self,
         item: InventoryItem,
+        product_map: dict[PydanticObjectId, Product],
     ) -> tuple[str | None, list[str]]:
         if item.product_id:
-            product = await Product.get(item.product_id)
+            product = product_map.get(item.product_id)
 
             if product:
                 return product.name, product.tags
@@ -210,10 +225,38 @@ class RecipeService:
 
         return None, []
 
-    async def _get_inventory_context(
+    async def _normalize_inventory_items(
+        self,
+        items: list[InventoryItem],
+    ) -> list[tuple[InventoryItem, str]]:
+        product_map = await self._get_product_map(items)
+
+        candidates: list[tuple[InventoryItem, str, list[str]]] = []
+
+        for item in items:
+            raw_name, tags = self._get_inventory_item_name_and_tags(item, product_map)
+
+            if raw_name:
+                candidates.append((item, raw_name, tags))
+
+        normalized_results = await asyncio.gather(
+            *(self.normalization_service.normalize(raw=raw_name, tags=tags) for _, raw_name, tags in candidates)
+        )
+
+        items_with_names: list[tuple[InventoryItem, str]] = []
+
+        for (item, raw_name, _tags), normalized_name in zip(candidates, normalized_results, strict=True):
+            final_name = normalized_name or self._normalize_name(raw_name)
+
+            if final_name:
+                items_with_names.append((item, final_name))
+
+        return items_with_names
+
+    async def _load_active_inventory_items(
         self,
         user_id: str,
-    ) -> tuple[list[InventoryItem], list[str]]:
+    ) -> list[InventoryItem]:
         try:
             user_object_id = PydanticObjectId(user_id)
         except Exception:
@@ -222,7 +265,7 @@ class RecipeService:
                 detail='Invalid user id',
             )
 
-        items = (
+        return (
             await InventoryItem.find(
                 InventoryItem.user_id == user_object_id,
                 InventoryItem.status == InventoryStatus.ACTIVE,
@@ -231,24 +274,18 @@ class RecipeService:
             .to_list()
         )
 
+    async def _get_inventory_context(
+        self,
+        user_id: str,
+    ) -> tuple[list[InventoryItem], list[str]]:
+        items = await self._load_active_inventory_items(user_id)
+        items_with_names = await self._normalize_inventory_items(items)
+
         seen: set[str] = set()
         normalized_names: list[str] = []
 
-        for item in items:
-            raw_name, tags = await self._get_inventory_item_name_and_tags(item)
-
-            if not raw_name:
-                continue
-
-            normalized_name = await self.normalization_service.normalize(
-                raw=raw_name,
-                tags=tags,
-            )
-
-            if not normalized_name:
-                normalized_name = self._normalize_name(raw_name)
-
-            if not normalized_name or normalized_name in seen:
+        for _, normalized_name in items_with_names:
+            if normalized_name in seen:
                 continue
 
             seen.add(normalized_name)
@@ -643,26 +680,8 @@ class RecipeService:
     ) -> RecipeDetailResponseSchema:
         recipe = await self._get_or_fetch_recipe_details(spoonacular_id)
 
-        inventory_items, _ = await self._get_inventory_context(user_id)
-
-        inventory_items_with_names: list[tuple[InventoryItem, str]] = []
-
-        for item in inventory_items:
-            raw_name, tags = await self._get_inventory_item_name_and_tags(item)
-
-            if not raw_name:
-                continue
-
-            normalized_name = await self.normalization_service.normalize(
-                raw=raw_name,
-                tags=tags,
-            )
-
-            if not normalized_name:
-                normalized_name = self._normalize_name(raw_name)
-
-            if normalized_name:
-                inventory_items_with_names.append((item, normalized_name))
+        inventory_items = await self._load_active_inventory_items(user_id)
+        inventory_items_with_names = await self._normalize_inventory_items(inventory_items)
 
         ingredients: list[RecipeIngredientDetailResponseSchema] = []
 

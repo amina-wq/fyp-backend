@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 
 from beanie import PydanticObjectId
 from fastapi import HTTPException, status
+from src.modules.categories.models import FoodCategory
 from src.modules.categories.services import FoodCategoryService
 from src.modules.shopping_list.models import ShoppingListItem
 from src.modules.shopping_list.schemas import (
@@ -18,11 +19,16 @@ class ShoppingListService:
     def __init__(self):
         self.category_service = FoodCategoryService()
 
-    async def _to_response(self, item: ShoppingListItem) -> ShoppingListItemResponseSchema:
-        category = await self.category_service.get_category_document_by_id(
-            category_id=str(item.category_id),
-            active_only=False,
-        )
+    async def _to_response(
+        self,
+        item: ShoppingListItem,
+        category: FoodCategory | None = None,
+    ) -> ShoppingListItemResponseSchema:
+        if category is None:
+            category = await self.category_service.get_category_document_by_id(
+                category_id=str(item.category_id),
+                active_only=False,
+            )
 
         return ShoppingListItemResponseSchema(
             id=str(item.id),
@@ -84,14 +90,26 @@ class ShoppingListService:
 
         items = await ShoppingListItem.find(*filters).sort(ShoppingListItem.added_at).to_list()
 
-        return [await self._to_response(item) for item in items]
+        category_ids = list({item.category_id for item in items})
+        categories = await FoodCategory.find({'_id': {'$in': category_ids}}).to_list() if category_ids else []
+        category_map = {category.id: category for category in categories}
+
+        return [await self._to_response(item, category=category_map.get(item.category_id)) for item in items]
 
     async def get_item_by_id(
         self,
         item_id: str,
         user_id: str,
     ) -> ShoppingListItem:
-        item = await ShoppingListItem.get(PydanticObjectId(item_id))
+        try:
+            item_object_id = PydanticObjectId(item_id)
+        except Exception:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail='Invalid item id',
+            )
+
+        item = await ShoppingListItem.get(item_object_id)
 
         if not item or item.user_id != PydanticObjectId(user_id):
             raise HTTPException(
