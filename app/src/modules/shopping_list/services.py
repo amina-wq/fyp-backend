@@ -1,3 +1,4 @@
+import logging
 from datetime import UTC, datetime
 
 from beanie import PydanticObjectId
@@ -9,6 +10,8 @@ from src.modules.shopping_list.schemas import (
     ShoppingListItemResponseSchema,
     ShoppingListItemUpdateSchema,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class ShoppingListService:
@@ -56,6 +59,15 @@ class ShoppingListService:
         )
 
         await item.insert()
+
+        logger.info(
+            'Shopping list item created: user_id=%s item_id=%s category_id=%s source=%s',
+            user_id,
+            item.id,
+            category.id,
+            item.source,
+        )
+
         return await self._to_response(item)
 
     async def get_items(
@@ -115,6 +127,20 @@ class ShoppingListService:
         item.updated_at = datetime.now(UTC)
         await item.save()
 
+        logger.info(
+            'Shopping list item toggled: user_id=%s item_id=%s is_checked=%s',
+            user_id,
+            item.id,
+            item.is_checked,
+        )
+
+        logger.info(
+            'Shopping list item updated: user_id=%s item_id=%s fields=%s',
+            user_id,
+            item.id,
+            sorted(update_data.keys()),
+        )
+
         return await self._to_response(item)
 
     async def toggle_checked(
@@ -145,6 +171,12 @@ class ShoppingListService:
 
         await item.delete()
 
+        logger.info(
+            'Shopping list item deleted: user_id=%s item_id=%s',
+            user_id,
+            item.id,
+        )
+
         return {'detail': 'Shopping list item deleted'}
 
     async def clear_checked(
@@ -161,5 +193,11 @@ class ShoppingListService:
         for item in items:
             await item.delete()
             deleted_count += 1
+
+        logger.info(
+            'Checked shopping list items cleared: user_id=%s deleted_count=%s',
+            user_id,
+            deleted_count,
+        )
 
         return {'detail': f'Deleted {deleted_count} checked shopping list items'}

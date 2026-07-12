@@ -1,3 +1,4 @@
+import logging
 from datetime import UTC, date, datetime, timedelta
 
 from beanie import PydanticObjectId
@@ -21,6 +22,8 @@ from src.modules.auth.schemas import (
     UserUpdateNameSchema,
 )
 from src.modules.inventory.models import InventoryItem, InventoryStatus, ScheduledNotification
+
+logger = logging.getLogger(__name__)
 
 
 class AuthService:
@@ -52,6 +55,11 @@ class AuthService:
 
         await user.insert()
 
+        logger.info(
+            'User registered: user_id=%s',
+            user.id,
+        )
+
         return cls._create_tokens(user)
 
     @classmethod
@@ -75,6 +83,11 @@ class AuthService:
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail='User account is inactive',
             )
+
+        logger.info(
+            'User logged in: user_id=%s',
+            user.id,
+        )
 
         return cls._create_tokens(user)
 
@@ -103,6 +116,11 @@ class AuthService:
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail='User account is inactive',
             )
+
+        logger.info(
+            'Token refreshed: user_id=%s',
+            user.id,
+        )
 
         return cls._create_tokens(user)
 
@@ -175,6 +193,15 @@ class AuthService:
 
             await item.save()
 
+        logger.info(
+            'Inventory notifications rescheduled: '
+            'user_id=%s item_count=%s notifications_enabled=%s notification_days=%s',
+            user.id,
+            len(items),
+            user.expiry_notifications_enabled,
+            user.notification_days_before,
+        )
+
     @classmethod
     async def update_user_settings(
         cls,
@@ -196,6 +223,12 @@ class AuthService:
         user.updated_at = datetime.now(UTC)
 
         await user.save()
+
+        logger.info(
+            'User settings updated: user_id=%s fields=%s',
+            user.id,
+            sorted(update_data.keys()),
+        )
 
         if should_reschedule_notifications:
             await cls._reschedule_inventory_notifications_for_user(user)

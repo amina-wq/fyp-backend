@@ -1,3 +1,4 @@
+import logging
 from datetime import UTC, datetime
 
 from beanie import PydanticObjectId
@@ -9,6 +10,8 @@ from src.modules.products.schemas import (
     ManualProductCreateSchema,
     ProductResponseSchema,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class ProductService:
@@ -49,6 +52,11 @@ class ProductService:
     async def get_or_fetch_by_barcode(self, barcode: str) -> ProductResponseSchema:
         barcode = barcode.strip()
 
+        logger.info(
+            'Barcode lookup started: barcode=%s',
+            barcode,
+        )
+
         if not barcode:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -72,11 +80,22 @@ class ProductService:
                     existing_product.updated_at = datetime.now(UTC)
                     await existing_product.save()
 
+            logger.info(
+                'Product found locally: product_id=%s barcode=%s',
+                existing_product.id,
+                barcode,
+            )
+
             return self._to_response(existing_product)
 
         off_product = await fetch_product_by_barcode(barcode)
 
         if not off_product or not off_product.get('name'):
+            logger.info(
+                'Product not found in OpenFoodFacts: barcode=%s',
+                barcode,
+            )
+
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail='Product not found. Try adding it manually',
@@ -95,11 +114,23 @@ class ProductService:
 
         try:
             await product.insert()
+
+            logger.info(
+                'Product fetched from OpenFoodFacts: product_id=%s barcode=%s',
+                product.id,
+                product.barcode,
+            )
         except DuplicateKeyError:
             existing_product = await Product.find_one(Product.barcode == barcode)
 
             if existing_product:
                 return self._to_response(existing_product)
+
+            logger.info(
+                'Product duplicate detected and existing product returned: product_id=%s barcode=%s',
+                existing_product.id,
+                barcode,
+            )
 
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
@@ -141,6 +172,12 @@ class ProductService:
 
         try:
             await product.insert()
+
+            logger.info(
+                'Manual product created: product_id=%s barcode=%s',
+                product.id,
+                product.barcode,
+            )
         except DuplicateKeyError:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,

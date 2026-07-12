@@ -40,6 +40,12 @@ class NotificationService:
                 self._mark_notifications_as_sent(due_notifications, now)
                 item.updated_at = now
                 await item.save()
+                logger.warning(
+                    'Notification skipped because user was not found: item_id=%s user_id=%s notification_count=%s',
+                    item.id,
+                    item.user_id,
+                    len(due_notifications),
+                )
                 continue
 
             if not user.expiry_notifications_enabled:
@@ -47,6 +53,13 @@ class NotificationService:
                 self._mark_notifications_as_sent(due_notifications, now)
                 item.updated_at = now
                 await item.save()
+                logger.info(
+                    'Notification skipped because notifications are disabled: '
+                    'item_id=%s user_id=%s notification_count=%s',
+                    item.id,
+                    user.id,
+                    len(due_notifications),
+                )
                 continue
 
             product_name = await self._get_item_display_name(item)
@@ -56,6 +69,12 @@ class NotificationService:
                     skipped_count += 1
                     notification.is_sent = True
                     notification.sent_at = now
+                    logger.info(
+                        'Notification skipped because FCM token is missing: item_id=%s user_id=%s days_before=%s',
+                        item.id,
+                        user.id,
+                        notification.days_before,
+                    )
                     continue
 
                 is_sent = await FirebaseService.send_push_notification(
@@ -76,8 +95,20 @@ class NotificationService:
                     sent_count += 1
                     notification.is_sent = True
                     notification.sent_at = now
+                    logger.info(
+                        'Notification sent: item_id=%s user_id=%s days_before=%s',
+                        item.id,
+                        user.id,
+                        notification.days_before,
+                    )
                 else:
                     failed_count += 1
+                    logger.warning(
+                        'Notification failed: item_id=%s user_id=%s days_before=%s',
+                        item.id,
+                        user.id,
+                        notification.days_before,
+                    )
 
             item.updated_at = now
             await item.save()

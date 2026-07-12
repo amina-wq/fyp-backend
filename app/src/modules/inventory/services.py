@@ -1,3 +1,4 @@
+import logging
 import uuid
 from datetime import UTC, date, datetime, timedelta
 from urllib.parse import urlparse
@@ -27,6 +28,8 @@ ALLOWED_IMAGE_TYPES = {
 }
 MAX_IMAGE_SIZE = 5 * 1024 * 1024
 S3_INVENTORY_ITEMS_PREFIX = 'inventory_items'
+
+logger = logging.getLogger(__name__)
 
 
 class InventoryService:
@@ -88,6 +91,11 @@ class InventoryService:
                 Key=object_key,
             )
         except (BotoCoreError, ClientError):
+            logger.exception(
+                'Failed to delete inventory item image from S3: object_key=%s',
+                object_key,
+            )
+
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail='Failed to delete image from S3',
@@ -243,6 +251,13 @@ class InventoryService:
 
         await item.save()
 
+        logger.info(
+            'Inventory item status changed: user_id=%s item_id=%s status=%s',
+            user_id,
+            item.id,
+            new_status,
+        )
+
         return item
 
     async def create_item(
@@ -330,6 +345,15 @@ class InventoryService:
         )
 
         await item.insert()
+
+        logger.info(
+            'Inventory item created: user_id=%s item_id=%s category_id=%s product_id=%s expiration_date=%s',
+            user_id,
+            item.id,
+            category.id,
+            item.product_id,
+            item.expiration_date,
+        )
 
         return await self._to_response(item)
 
@@ -434,6 +458,13 @@ class InventoryService:
         item.updated_at = datetime.now(UTC)
 
         await item.save()
+
+        logger.info(
+            'Inventory item updated: user_id=%s item_id=%s fields=%s',
+            user_id,
+            item.id,
+            sorted(update_data.keys()),
+        )
 
         return await self._to_response(item)
 
@@ -564,6 +595,16 @@ class InventoryService:
                 CacheControl='public, max-age=31536000',
             )
         except (BotoCoreError, ClientError):
+            logger.exception(
+                'Failed to upload inventory item image to S3: '
+                'user_id=%s item_id=%s object_key=%s content_type=%s size=%s',
+                user_id,
+                item.id,
+                object_key,
+                content_type,
+                len(content),
+            )
+
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail='Failed to upload image to S3',
@@ -577,6 +618,14 @@ class InventoryService:
         await item.save()
 
         self._delete_s3_image_if_exists(old_image_url)
+
+        logger.info(
+            'Inventory item image uploaded: user_id=%s item_id=%s content_type=%s size=%s',
+            user_id,
+            item.id,
+            content_type,
+            len(content),
+        )
 
         return await self._to_response(item)
 
@@ -598,5 +647,12 @@ class InventoryService:
         await item.save()
 
         self._delete_s3_image_if_exists(old_image_url)
+
+        logger.info(
+            'Inventory item image deleted: user_id=%s item_id=%s had_image=%s',
+            user_id,
+            item.id,
+            old_image_url is not None,
+        )
 
         return await self._to_response(item)
