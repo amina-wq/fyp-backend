@@ -42,7 +42,7 @@ class UserUpdateNameSchema(BaseModel):
 class UserSettingsUpdateSchema(BaseModel):
     notification_days_before: Annotated[
         list[int] | None,
-        Field(default=None, min_length=1),
+        Field(min_length=1),
     ] = None
     expiry_notifications_enabled: bool | None = None
     theme_mode: ThemeMode | None = None

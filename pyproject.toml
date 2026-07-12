@@ -52,3 +52,13 @@ order-by-type = false
 [tool.ruff.format]
 quote-style = "single"
 
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+testpaths = ["tests"]
+pythonpath = ["app"]
+filterwarnings = [
+    "ignore::pydantic.warnings.UnsupportedFieldAttributeWarning",
+]
+

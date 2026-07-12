@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from src.modules.auth.dependencies import get_auth_service, get_current_user
 from src.modules.auth.models import User
@@ -12,6 +14,8 @@ from src.modules.auth.schemas import (
     UserUpdateNameSchema,
 )
 from src.modules.auth.services import AuthService
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -30,6 +34,8 @@ async def register_user(
     except HTTPException:
         raise
     except Exception:
+        logger.exception('Unexpected error occurred during registration')
+
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail='Unexpected error occurred during registration',
@@ -50,6 +56,8 @@ async def login_user(
     except HTTPException:
         raise
     except Exception:
+        logger.exception('Unexpected error occurred during login')
+
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail='Unexpected error occurred during login',
@@ -70,6 +78,8 @@ async def refresh_tokens(
     except HTTPException:
         raise
     except Exception:
+        logger.exception('Unexpected error occurred during token refresh')
+
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail='Unexpected error occurred during token refresh',
