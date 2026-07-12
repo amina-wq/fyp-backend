@@ -124,13 +124,13 @@ class ProductService:
             existing_product = await Product.find_one(Product.barcode == barcode)
 
             if existing_product:
-                return self._to_response(existing_product)
+                logger.info(
+                    'Product duplicate detected and existing product returned: product_id=%s barcode=%s',
+                    existing_product.id,
+                    barcode,
+                )
 
-            logger.info(
-                'Product duplicate detected and existing product returned: product_id=%s barcode=%s',
-                existing_product.id,
-                barcode,
-            )
+                return self._to_response(existing_product)
 
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,

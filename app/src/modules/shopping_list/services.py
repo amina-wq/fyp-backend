@@ -128,13 +128,6 @@ class ShoppingListService:
         await item.save()
 
         logger.info(
-            'Shopping list item toggled: user_id=%s item_id=%s is_checked=%s',
-            user_id,
-            item.id,
-            item.is_checked,
-        )
-
-        logger.info(
             'Shopping list item updated: user_id=%s item_id=%s fields=%s',
             user_id,
             item.id,
@@ -156,6 +149,13 @@ class ShoppingListService:
         item.is_checked = not item.is_checked
         item.updated_at = datetime.now(UTC)
         await item.save()
+
+        logger.info(
+            'Shopping list item toggled: user_id=%s item_id=%s is_checked=%s',
+            user_id,
+            item.id,
+            item.is_checked,
+        )
 
         return await self._to_response(item)
 
