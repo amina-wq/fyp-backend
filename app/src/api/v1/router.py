@@ -6,6 +6,7 @@ from src.modules.inventory.api.v1.router import router as inventory_router
 from src.modules.products.api.v1.router import router as products_router
 from src.modules.recipes.api.v1.router import router as recipes_router
 from src.modules.shopping_list.api.v1.router import router as shopping_list_router
+from src.modules.storage_recommendations.api.v1.router import router as storage_recommendations_router
 
 router = APIRouter(prefix='/api/v1')
 
@@ -54,4 +55,10 @@ router.include_router(
     recipes_router,
     prefix='/recipes',
     tags=['Recipes'],
+)
+
+router.include_router(
+    storage_recommendations_router,
+    prefix='/storage',
+    tags=['Storage Recommendations'],
 )

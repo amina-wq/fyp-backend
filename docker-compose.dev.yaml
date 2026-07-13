@@ -3,13 +3,11 @@ services:
     extends:
       file: docker-compose.yaml
       service: fyp-backend
-    ports:
-      - "80:80"
-    depends_on:
-      mongodb:
-        condition: service_started
-      redis:
-        condition: service_started
+
+  notification-worker:
+    extends:
+      file: docker-compose.yaml
+      service: notification-worker
 
   mongodb:
     extends:

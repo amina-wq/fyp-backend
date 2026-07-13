@@ -1,0 +1,17 @@
+CATEGORIES = {
+    'dairy',
+    'meat',
+    'seafood',
+    'fruits',
+    'vegetables',
+    'bakery',
+    'grains',
+    'beverages',
+    'snacks',
+    'frozen',
+    'canned',
+    'cooked_food',
+    'leftovers',
+    'condiments',
+    'other',
+}

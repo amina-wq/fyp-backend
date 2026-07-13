@@ -12,6 +12,7 @@ from src.modules.inventory.models import InventoryItem
 from src.modules.products.models import Product
 from src.modules.recipes.models import Recipe, RecipeQuery
 from src.modules.shopping_list.models import ShoppingListItem
+from src.modules.storage_recommendations.models import StorageRecommendation
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +44,7 @@ async def init_database() -> None:
             RecipeQuery,
             IngredientNormalization,
             FoodCategory,
+            StorageRecommendation,
         ],
     )
 
