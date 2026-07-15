@@ -11,6 +11,17 @@ logger = logging.getLogger(__name__)
 
 
 class NotificationService:
+    async def send_test_notification(self, user: User) -> bool:
+        if not user.fcm_token:
+            return False
+
+        return await FirebaseService.send_push_notification(
+            token=user.fcm_token,
+            title='Test notification',
+            body='This is a test push notification. If you can see this, push delivery is working.',
+            data={'type': 'test'},
+        )
+
     async def process_due_notifications(self) -> dict[str, int]:
         now = datetime.now(UTC)
 
