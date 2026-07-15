@@ -1,4 +1,5 @@
 import logging
+from collections.abc import Callable
 from datetime import UTC, datetime
 
 from fastapi import HTTPException, status
@@ -33,6 +34,27 @@ class StorageRecommendationService:
             for rule in rules
         ]
 
+    def _rule_matchers(
+        self,
+        data: StorageRecommendationRequestSchema,
+    ) -> list[Callable[[StorageRule], bool]]:
+        matchers: list[Callable[[StorageRule], bool]] = []
+
+        if data.location and data.state:
+            matchers.append(lambda rule: rule.location == data.location and rule.state == data.state)
+
+        if data.location:
+            matchers.append(lambda rule: rule.location == data.location and rule.is_default)
+            matchers.append(lambda rule: rule.location == data.location)
+
+        if data.state:
+            matchers.append(lambda rule: rule.state == data.state and rule.is_default)
+            matchers.append(lambda rule: rule.state == data.state)
+
+        matchers.append(lambda rule: rule.is_default)
+
+        return matchers
+
     def _select_rule(
         self,
         rules: list[StorageRule],
@@ -41,32 +63,11 @@ class StorageRecommendationService:
         if not rules:
             return None
 
-        if data.location and data.state:
-            for rule in rules:
-                if rule.location == data.location and rule.state == data.state:
-                    return rule
+        for matcher in self._rule_matchers(data):
+            match = next((rule for rule in rules if matcher(rule)), None)
 
-        if data.location:
-            for rule in rules:
-                if rule.location == data.location and rule.is_default:
-                    return rule
-
-            for rule in rules:
-                if rule.location == data.location:
-                    return rule
-
-        if data.state:
-            for rule in rules:
-                if rule.state == data.state and rule.is_default:
-                    return rule
-
-            for rule in rules:
-                if rule.state == data.state:
-                    return rule
-
-        for rule in rules:
-            if rule.is_default:
-                return rule
+            if match:
+                return match
 
         return rules[0]
 
@@ -168,11 +169,7 @@ class StorageRecommendationService:
         display_name = str(ai_data.get('display_name') or canonical_name.title())
 
         normalized_aliases = sorted(
-            {
-                normalized
-                for alias in [canonical_name, *aliases]
-                if (normalized := normalize_storage_name(alias))
-            },
+            {normalized for alias in [canonical_name, *aliases] if (normalized := normalize_storage_name(alias))},
         )
 
         return StorageRecommendation(

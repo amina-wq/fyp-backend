@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from datetime import UTC, datetime
 
@@ -54,7 +55,7 @@ class AuthService:
         user = User(
             name=data.name,
             email=data.email,
-            hashed_password=hash_password(data.password),
+            hashed_password=await asyncio.to_thread(hash_password, data.password),
         )
 
         await user.insert()
@@ -76,7 +77,7 @@ class AuthService:
                 detail='Incorrect email or password',
             )
 
-        if not verify_password(data.password, user.hashed_password):
+        if not await asyncio.to_thread(verify_password, data.password, user.hashed_password):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail='Incorrect email or password',

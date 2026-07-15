@@ -1,11 +1,14 @@
 import asyncio
 import logging
 from collections.abc import Awaitable, Callable
+from typing import TypeVar
 
 logger = logging.getLogger(__name__)
 
+T = TypeVar('T')
 
-async def retry_async[T](
+
+async def retry_async(
     func: Callable[[], Awaitable[T]],
     *,
     attempts: int = 3,

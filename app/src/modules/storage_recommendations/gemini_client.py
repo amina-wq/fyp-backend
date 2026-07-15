@@ -15,7 +15,8 @@ Return only valid JSON with this shape:
 {
   "canonical_name": "short English food name",
   "display_name": "English display name",
-  "category": "dairy|meat|seafood|fruits|vegetables|bakery|grains|beverages|snacks|frozen|canned|cooked_food|leftovers|condiments|other",
+  "category": "dairy|meat|seafood|fruits|vegetables|bakery|grains|beverages|snacks|
+  frozen|canned|cooked_food|leftovers|condiments|other",
   "aliases": ["lowercase English aliases"],
   "rules": [
     {
