@@ -6,6 +6,8 @@ services:
       - .env
     ports:
       - "80:80"
+    volumes:
+      - ./secrets/firebase-service-account.json:/run/secrets/firebase-service-account.json:ro
     healthcheck:
       test: [ "CMD-SHELL", "curl -f http://${FASTAPI_HOST}:${FASTAPI_PORT}/api/health > /dev/null || exit 1" ]
       interval: 30s
