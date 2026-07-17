@@ -9,7 +9,8 @@ GEMINI_MODEL = 'gemini-2.5-flash-lite'
 GEMINI_TIMEOUT_MS = 10_000
 
 SYSTEM_PROMPT = """You are a food storage duration expert.
-Your task is to recommend how long a food product can be safely stored.
+Your task is to recommend how long a food product can be safely stored, for the small
+number of storage methods a real person actually chooses between.
 
 Return only valid JSON with this shape:
 {
@@ -33,8 +34,19 @@ Return only valid JSON with this shape:
 }
 
 Rules:
+- Return between 2 and 4 rules, never more. Pick only the storage methods a real person
+  would actually choose between for this specific product (for an apple: whole on the
+  counter, whole in the fridge, cut in the fridge — not every possible location/state
+  combination)
+- Every rule must be a genuinely distinct practical choice: skip a location/state
+  combination if it would not meaningfully change how long the product lasts or how
+  someone handles it. Never return two rules whose recommended_days are within 1 day
+  of each other unless there is no other realistic combination left to report
+- Skip combinations that do not make sense for this product (no "cooked" state for a
+  fruit normally eaten raw, no "freezer" rule for something nobody freezes)
 - Use conservative food safety values, never overestimate shelf life
-- Include one rule per relevant storage location, at least one rule must have "is_default": true
+- At least one rule must have "is_default": true — the single most common way people
+  store this product
 - If the product is ambiguous, return the safest common case
 - "best_before_days" is about peak quality (taste/texture), not food safety: the number of days
   after which quality noticeably declines but the product is still safe to eat.
@@ -62,9 +74,9 @@ class GeminiStorageClient:
         user_message = json.dumps(
             {
                 'name': name,
-                'category': category,
-                'location': location,
-                'state': state,
+                # 'category': category,
+                # 'location': location,
+                # 'state': state,
             },
         )
 
