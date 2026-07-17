@@ -23,6 +23,7 @@ class StorageRule(BaseModel):
     recommended_days: Annotated[int, Field(gt=0, le=1095)]
     min_days: Annotated[int | None, Field(default=None, gt=0, le=1095)] = None
     max_days: Annotated[int | None, Field(default=None, gt=0, le=1095)] = None
+    best_before_days: Annotated[int | None, Field(default=None, gt=0, le=1095)] = None
     is_default: bool = False
 
     @field_validator('max_days')
@@ -32,6 +33,16 @@ class StorageRule(BaseModel):
 
         if value is not None and min_days is not None and value < min_days:
             raise ValueError('max_days cannot be lower than min_days')
+
+        return value
+
+    @field_validator('best_before_days')
+    @classmethod
+    def validate_best_before_days(cls, value: int | None, info) -> int | None:
+        recommended_days = info.data.get('recommended_days')
+
+        if value is not None and recommended_days is not None and value > recommended_days:
+            raise ValueError('best_before_days cannot exceed recommended_days')
 
         return value
 

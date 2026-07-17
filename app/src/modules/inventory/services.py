@@ -12,7 +12,7 @@ from src.core.config import settings
 from src.modules.auth.models import User
 from src.modules.categories.models import FoodCategory
 from src.modules.categories.services import FoodCategoryService
-from src.modules.inventory.models import InventoryItem, InventoryStatus
+from src.modules.inventory.models import InventoryItem, InventoryStatus, StorageLocation
 from src.modules.inventory.schemas import (
     ExpiryState,
     InventoryItemCreateSchema,
@@ -23,6 +23,7 @@ from src.modules.inventory.schemas import (
 from src.modules.notifications.scheduling import APP_TIMEZONE, build_scheduled_notifications
 from src.modules.products.models import Product
 from src.modules.products.services import ProductService
+from src.modules.storage_recommendations.services import StorageRecommendationService
 
 ALLOWED_IMAGE_TYPES = {
     'image/jpeg': '.jpg',
@@ -41,6 +42,7 @@ class InventoryService:
     def __init__(self):
         self.product_service = ProductService()
         self.category_service = FoodCategoryService()
+        self.storage_recommendation_service = StorageRecommendationService()
 
         s3_client_kwargs = {
             'region_name': settings.AWS_REGION,
@@ -117,6 +119,25 @@ class InventoryService:
             return ExpiryState.EXPIRING
 
         return ExpiryState.FRESH
+
+    async def _calculate_best_before_date(
+        self,
+        expiration_date: date,
+        location: StorageLocation,
+        name: str | None,
+    ) -> date | None:
+        if not name:
+            return None
+
+        offset_days = await self.storage_recommendation_service.get_cached_quality_offset_days(
+            name=name,
+            location=location,
+        )
+
+        if offset_days is None:
+            return None
+
+        return expiration_date - timedelta(days=offset_days)
 
     async def _get_user_item_or_404(
         self,
@@ -203,6 +224,7 @@ class InventoryService:
             amount=item.amount,
             unit=item.unit,
             expiration_date=item.expiration_date,
+            best_before_date=item.best_before_date,
             status=item.status,
             expiry_state=expiry_state,
             scheduled_notifications=item.scheduled_notifications,
@@ -310,6 +332,18 @@ class InventoryService:
             active_only=True,
         )
 
+        lookup_name = data.custom_name
+
+        if not lookup_name and product_object_id:
+            product = await Product.get(product_object_id)
+            lookup_name = product.name if product else None
+
+        best_before_date = await self._calculate_best_before_date(
+            expiration_date=data.expiration_date,
+            location=data.location,
+            name=lookup_name,
+        )
+
         item = InventoryItem(
             user_id=user_object_id,
             product_id=product_object_id,
@@ -322,6 +356,7 @@ class InventoryService:
             amount=data.amount,
             unit=data.unit,
             expiration_date=data.expiration_date,
+            best_before_date=best_before_date,
             status=InventoryStatus.ACTIVE,
             scheduled_notifications=scheduled_notifications,
         )
@@ -448,6 +483,16 @@ class InventoryService:
                 )
             else:
                 item.scheduled_notifications = []
+
+        if 'expiration_date' in update_data or 'location' in update_data:
+            product = await self._get_product_for_item(item)
+            lookup_name = item.custom_name or (product.name if product else None)
+
+            item.best_before_date = await self._calculate_best_before_date(
+                expiration_date=item.expiration_date,
+                location=item.location,
+                name=lookup_name,
+            )
 
         item.updated_at = datetime.now(UTC)
 

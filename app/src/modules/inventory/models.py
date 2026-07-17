@@ -53,6 +53,7 @@ class InventoryItem(Document):
     amount: float = Field(default=1, gt=0)
     unit: InventoryUnits = InventoryUnits.PCS
     expiration_date: date
+    best_before_date: date | None = None
     status: InventoryStatus = InventoryStatus.ACTIVE
     scheduled_notifications: list[ScheduledNotification] = Field(default_factory=list)
     added_at: datetime = Field(default_factory=lambda: datetime.now(UTC))

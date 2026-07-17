@@ -60,6 +60,7 @@ class InventoryItemResponseSchema(BaseModel):
     amount: float
     unit: InventoryUnits
     expiration_date: date
+    best_before_date: date | None = None
     status: InventoryStatus
     expiry_state: ExpiryState
     scheduled_notifications: list[ScheduledNotification] = Field(default_factory=list)

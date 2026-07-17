@@ -25,6 +25,7 @@ Return only valid JSON with this shape:
       "recommended_days": 1,
       "min_days": 1,
       "max_days": 2,
+      "best_before_days": 1,
       "is_default": true
     }
   ],
@@ -35,6 +36,10 @@ Rules:
 - Use conservative food safety values, never overestimate shelf life
 - Include one rule per relevant storage location, at least one rule must have "is_default": true
 - If the product is ambiguous, return the safest common case
+- "best_before_days" is about peak quality (taste/texture), not food safety: the number of days
+  after which quality noticeably declines but the product is still safe to eat.
+  It must always be less than or equal to "recommended_days". Omit it only if there is no
+  meaningful quality decline before the end of shelf life (e.g. canned goods)
 - Do not explain your answer"""
 
 

@@ -18,6 +18,7 @@ class StorageRecommendationOptionSchema(BaseModel):
     recommended_days: int
     min_days: int | None = None
     max_days: int | None = None
+    best_before_days: int | None = None
 
 
 class StorageRecommendationResponseSchema(BaseModel):
@@ -28,6 +29,7 @@ class StorageRecommendationResponseSchema(BaseModel):
     recommended_days: int | None = None
     min_days: int | None = None
     max_days: int | None = None
+    best_before_days: int | None = None
     location: StorageLocation | None = None
     state: StorageState | None = None
     source: str

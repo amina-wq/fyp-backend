@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 from fastapi import HTTPException, status
 from pydantic import ValidationError
 from pymongo.errors import DuplicateKeyError
+from src.modules.inventory.models import StorageLocation
 from src.modules.storage_recommendations.constants import CATEGORIES
 from src.modules.storage_recommendations.gemini_client import GeminiStorageClient
 from src.modules.storage_recommendations.models import StorageRecommendation, StorageRule
@@ -30,6 +31,7 @@ class StorageRecommendationService:
                 recommended_days=rule.recommended_days,
                 min_days=rule.min_days,
                 max_days=rule.max_days,
+                best_before_days=rule.best_before_days,
             )
             for rule in rules
         ]
@@ -89,6 +91,7 @@ class StorageRecommendationService:
             recommended_days=rule.recommended_days if rule and not requires_clarification else None,
             min_days=rule.min_days if rule and not requires_clarification else None,
             max_days=rule.max_days if rule and not requires_clarification else None,
+            best_before_days=rule.best_before_days if rule and not requires_clarification else None,
             location=rule.location if rule and not requires_clarification else None,
             state=rule.state if rule and not requires_clarification else None,
             source=document.source,
@@ -231,3 +234,27 @@ class StorageRecommendationService:
         logger.info('Storage recommendation cached from Gemini: name=%s', input_name)
 
         return self._format_response(input_name, cached_document, data)
+
+    async def get_cached_quality_offset_days(
+        self,
+        name: str,
+        location: StorageLocation | None = None,
+    ) -> int | None:
+        """Cache-only lookup, never calls Gemini. Safe to use inline in hot paths."""
+        normalized_name = normalize_storage_name(name.strip())
+
+        if not normalized_name:
+            return None
+
+        cached = await self._find_cached(normalized_name)
+
+        if not cached:
+            return None
+
+        request_data = StorageRecommendationRequestSchema(name=name, location=location)
+        rule = self._select_rule(cached.rules, request_data)
+
+        if not rule or rule.best_before_days is None:
+            return None
+
+        return rule.recommended_days - rule.best_before_days
