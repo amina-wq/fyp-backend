@@ -227,6 +227,14 @@ class FoodCategoryService:
 
         return [self._to_response(category) for category in categories]
 
+    async def _next_sort_order(self) -> int:
+        last_category = await FoodCategory.find_all().sort(-FoodCategory.sort_order).limit(1).to_list()
+
+        if not last_category:
+            return 1
+
+        return last_category[0].sort_order + 1
+
     async def create_category(
         self,
         data: FoodCategoryCreateSchema,
@@ -243,6 +251,8 @@ class FoodCategoryService:
                 detail='Category with this key already exists',
             )
 
+        sort_order = data.sort_order if data.sort_order is not None else await self._next_sort_order()
+
         category = FoodCategory(
             key=key,
             name=data.name.strip(),
@@ -251,7 +261,7 @@ class FoodCategoryService:
             color_hex=data.color_hex,
             is_active=True,
             is_default=False,
-            sort_order=data.sort_order,
+            sort_order=sort_order,
             created_at=datetime.now(UTC),
             updated_at=datetime.now(UTC),
         )

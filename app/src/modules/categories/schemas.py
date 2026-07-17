@@ -35,7 +35,7 @@ class FoodCategoryCreateSchema(BaseModel):
     description: str | None = Field(default=None, max_length=300)
     icon_url: str | None = None
     color_hex: str | None = Field(default=None, max_length=20)
-    sort_order: int = 0
+    sort_order: int | None = None
 
 
 class FoodCategoryUpdateSchema(BaseModel):
