@@ -7,9 +7,6 @@ from src.modules.storage_recommendations.models import StorageState
 
 class StorageRecommendationRequestSchema(BaseModel):
     name: Annotated[str, Field(min_length=1, max_length=120)]
-    category: Annotated[str | None, Field(default=None, max_length=50)] = None
-    location: StorageLocation | None = None
-    state: StorageState | None = None
 
 
 class StorageRecommendationOptionSchema(BaseModel):
