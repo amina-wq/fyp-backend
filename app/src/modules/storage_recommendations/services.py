@@ -208,10 +208,7 @@ class StorageRecommendationService:
             return self._format_response(input_name, cached, data)
 
         ai_data = await self.gemini_client.fetch_storage_recommendation(
-            name=input_name,
-            category=data.category,
-            location=data.location.value if data.location else None,
-            state=data.state.value if data.state else None,
+            name=input_name
         )
 
         if not ai_data:
