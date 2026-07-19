@@ -62,9 +62,6 @@ class GeminiStorageClient:
     async def fetch_storage_recommendation(
         self,
         name: str,
-        category: str | None,
-        location: str | None,
-        state: str | None,
     ) -> dict | None:
         api_key = self._get_api_key()
 
@@ -74,9 +71,6 @@ class GeminiStorageClient:
         user_message = json.dumps(
             {
                 'name': name,
-                # 'category': category,
-                # 'location': location,
-                # 'state': state,
             },
         )
 
