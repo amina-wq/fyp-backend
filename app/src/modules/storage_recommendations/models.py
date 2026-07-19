@@ -57,7 +57,6 @@ class StorageRecommendation(Document):
     source: str = 'gemini'
     is_verified: bool = False
     confidence: float = Field(default=0.6, ge=0, le=1)
-    requires_clarification: bool = False
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 

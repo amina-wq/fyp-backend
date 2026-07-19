@@ -32,5 +32,4 @@ class StorageRecommendationResponseSchema(BaseModel):
     source: str
     confidence: Annotated[float, Field(ge=0, le=1)]
     is_verified: bool
-    requires_clarification: bool = False
     options: list[StorageRecommendationOptionSchema] = Field(default_factory=list)

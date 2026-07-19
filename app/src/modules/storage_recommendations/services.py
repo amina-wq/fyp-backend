@@ -8,7 +8,7 @@ from pymongo.errors import DuplicateKeyError
 from src.modules.inventory.models import StorageLocation
 from src.modules.storage_recommendations.constants import CATEGORIES
 from src.modules.storage_recommendations.gemini_client import GeminiStorageClient
-from src.modules.storage_recommendations.models import StorageRecommendation, StorageRule
+from src.modules.storage_recommendations.models import StorageRecommendation, StorageRule, StorageState
 from src.modules.storage_recommendations.normalization import normalize_storage_name
 from src.modules.storage_recommendations.schemas import (
     StorageRecommendationOptionSchema,
@@ -38,20 +38,21 @@ class StorageRecommendationService:
 
     def _rule_matchers(
         self,
-        data: StorageRecommendationRequestSchema,
+        location: StorageLocation | None,
+        state: StorageState | None,
     ) -> list[Callable[[StorageRule], bool]]:
         matchers: list[Callable[[StorageRule], bool]] = []
 
-        if data.location and data.state:
-            matchers.append(lambda rule: rule.location == data.location and rule.state == data.state)
+        if location and state:
+            matchers.append(lambda rule: rule.location == location and rule.state == state)
 
-        if data.location:
-            matchers.append(lambda rule: rule.location == data.location and rule.is_default)
-            matchers.append(lambda rule: rule.location == data.location)
+        if location:
+            matchers.append(lambda rule: rule.location == location and rule.is_default)
+            matchers.append(lambda rule: rule.location == location)
 
-        if data.state:
-            matchers.append(lambda rule: rule.state == data.state and rule.is_default)
-            matchers.append(lambda rule: rule.state == data.state)
+        if state:
+            matchers.append(lambda rule: rule.state == state and rule.is_default)
+            matchers.append(lambda rule: rule.state == state)
 
         matchers.append(lambda rule: rule.is_default)
 
@@ -60,12 +61,13 @@ class StorageRecommendationService:
     def _select_rule(
         self,
         rules: list[StorageRule],
-        data: StorageRecommendationRequestSchema,
+        location: StorageLocation | None = None,
+        state: StorageState | None = None,
     ) -> StorageRule | None:
         if not rules:
             return None
 
-        for matcher in self._rule_matchers(data):
+        for matcher in self._rule_matchers(location, state):
             match = next((rule for rule in rules if matcher(rule)), None)
 
             if match:
@@ -77,27 +79,24 @@ class StorageRecommendationService:
         self,
         input_name: str,
         document: StorageRecommendation,
-        data: StorageRecommendationRequestSchema,
     ) -> StorageRecommendationResponseSchema:
-        rule = self._select_rule(document.rules, data)
+        rule = self._select_rule(document.rules)
         options = self._rule_options(document.rules)
-        requires_clarification = document.requires_clarification and not data.location and not data.state
 
         return StorageRecommendationResponseSchema(
             input=input_name,
             canonical_name=document.canonical_name,
             display_name=document.display_name,
             category=document.category,
-            recommended_days=rule.recommended_days if rule and not requires_clarification else None,
-            min_days=rule.min_days if rule and not requires_clarification else None,
-            max_days=rule.max_days if rule and not requires_clarification else None,
-            best_before_days=rule.best_before_days if rule and not requires_clarification else None,
-            location=rule.location if rule and not requires_clarification else None,
-            state=rule.state if rule and not requires_clarification else None,
+            recommended_days=rule.recommended_days if rule else None,
+            min_days=rule.min_days if rule else None,
+            max_days=rule.max_days if rule else None,
+            best_before_days=rule.best_before_days if rule else None,
+            location=rule.location if rule else None,
+            state=rule.state if rule else None,
             source=document.source,
             confidence=document.confidence,
             is_verified=document.is_verified,
-            requires_clarification=requires_clarification,
             options=options,
         )
 
@@ -141,7 +140,7 @@ class StorageRecommendationService:
         if not canonical_name:
             return None
 
-        category = self._validated_category(ai_data.get('category') or data.category)
+        category = self._validated_category(ai_data.get('category'))
 
         raw_aliases = ai_data.get('aliases') if isinstance(ai_data.get('aliases'), list) else []
         aliases = [str(alias) for alias in raw_aliases if str(alias).strip()]
@@ -205,11 +204,9 @@ class StorageRecommendationService:
         if cached:
             logger.info('Storage recommendation cache hit: name=%s', input_name)
 
-            return self._format_response(input_name, cached, data)
+            return self._format_response(input_name, cached)
 
-        ai_data = await self.gemini_client.fetch_storage_recommendation(
-            name=input_name
-        )
+        ai_data = await self.gemini_client.fetch_storage_recommendation(name=input_name)
 
         if not ai_data:
             raise HTTPException(
@@ -230,7 +227,7 @@ class StorageRecommendationService:
 
         logger.info('Storage recommendation cached from Gemini: name=%s', input_name)
 
-        return self._format_response(input_name, cached_document, data)
+        return self._format_response(input_name, cached_document)
 
     async def get_cached_quality_offset_days(
         self,
@@ -248,8 +245,7 @@ class StorageRecommendationService:
         if not cached:
             return None
 
-        request_data = StorageRecommendationRequestSchema(name=name, location=location)
-        rule = self._select_rule(cached.rules, request_data)
+        rule = self._select_rule(cached.rules, location)
 
         if not rule or rule.best_before_days is None:
             return None
