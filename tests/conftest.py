@@ -28,6 +28,7 @@ os.environ.setdefault('AWS_REGION', 'ap-southeast-1')
 os.environ.setdefault('AWS_S3_BUCKET_NAME', 'test-bucket')
 os.environ.setdefault('AWS_S3_PUBLIC_BASE_URL', 'https://example.com/test-bucket')
 os.environ.setdefault('LOGGING_LEVEL', 'WARNING')
+os.environ.setdefault('RATE_LIMIT_ENABLED', 'false')
 
 os.environ['GEMINI_API_KEY'] = ''
 os.environ['SPOONACULAR_API_KEY'] = ''

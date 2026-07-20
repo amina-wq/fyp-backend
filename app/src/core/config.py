@@ -23,6 +23,8 @@ class Settings(BaseSettings):
 
     LOGGING_LEVEL: str = 'INFO'
 
+    RATE_LIMIT_ENABLED: bool = True
+
     AWS_ACCESS_KEY_ID: str | None = None
     AWS_SECRET_ACCESS_KEY: str | None = None
     AWS_REGION: str

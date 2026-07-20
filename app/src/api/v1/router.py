@@ -1,4 +1,5 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from src.core.rate_limiter import rate_limit
 from src.modules.admin.api.v1.categories_router import router as admin_categories_router
 from src.modules.auth.api.v1.router import router as auth_router
 from src.modules.categories.api.v1.router import router as categories_router
@@ -9,7 +10,9 @@ from src.modules.recipes.api.v1.router import router as recipes_router
 from src.modules.shopping_list.api.v1.router import router as shopping_list_router
 from src.modules.storage_recommendations.api.v1.router import router as storage_recommendations_router
 
-router = APIRouter(prefix='/api/v1')
+default_rate_limit = rate_limit(times=120, seconds=60, scope='api-default')
+
+router = APIRouter(prefix='/api/v1', dependencies=[Depends(default_rate_limit)])
 
 router.include_router(
     auth_router,

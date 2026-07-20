@@ -2,6 +2,7 @@ import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from src.core.rate_limiter import rate_limit
 from src.modules.auth.dependencies import get_auth_service, get_current_user
 from src.modules.auth.models import User
 from src.modules.auth.schemas import (
@@ -24,11 +25,16 @@ router = APIRouter()
 
 logout_bearer = HTTPBearer(auto_error=False)
 
+register_rate_limit = rate_limit(times=5, seconds=60, scope='auth-register')
+login_rate_limit = rate_limit(times=5, seconds=60, scope='auth-login')
+refresh_rate_limit = rate_limit(times=10, seconds=60, scope='auth-refresh')
+
 
 @router.post(
     path='/register',
     response_model=TokenResponseSchema,
     status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(register_rate_limit)],
 )
 async def register_user(
     data: UserRegisterSchema,
@@ -51,6 +57,7 @@ async def register_user(
     path='/login',
     response_model=TokenResponseSchema,
     status_code=status.HTTP_200_OK,
+    dependencies=[Depends(login_rate_limit)],
 )
 async def login_user(
     data: UserLoginSchema,
@@ -73,6 +80,7 @@ async def login_user(
     path='/refresh',
     response_model=TokenResponseSchema,
     status_code=status.HTTP_200_OK,
+    dependencies=[Depends(refresh_rate_limit)],
 )
 async def refresh_tokens(
     data: RefreshTokenRequestSchema,
