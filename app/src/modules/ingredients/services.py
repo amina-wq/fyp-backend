@@ -1,3 +1,9 @@
+# Programmer Name: Rakhmatullayeva Amina
+# Program Name: FoodTrack
+# Description: Business logic for normalizing ingredient names with caching.
+# First Written on: Saturday, 27-Jun-2026
+# Edited on: Monday, 13-Jul-2026
+
 import re
 from datetime import UTC, datetime
 

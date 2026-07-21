@@ -1,3 +1,9 @@
+# Programmer Name: Rakhmatullayeva Amina
+# Program Name: FoodTrack
+# Description: MongoDB connection setup and Beanie document model initialization.
+# First Written on: Tuesday, 19-May-2026
+# Edited on: Monday, 13-Jul-2026
+
 import logging
 
 from beanie import init_beanie

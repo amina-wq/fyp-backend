@@ -1,3 +1,9 @@
+# Programmer Name: Rakhmatullayeva Amina
+# Program Name: FoodTrack
+# Description: Firebase Cloud Messaging integration for sending push notifications.
+# First Written on: Tuesday, 07-Jul-2026
+# Edited on: Tuesday, 07-Jul-2026
+
 import asyncio
 import logging
 from pathlib import Path

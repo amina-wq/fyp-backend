@@ -1,3 +1,9 @@
+# Programmer Name: Rakhmatullayeva Amina
+# Program Name: FoodTrack
+# Description: Password hashing and JWT token creation/validation utilities.
+# First Written on: Tuesday, 26-May-2026
+# Edited on: Sunday, 12-Jul-2026
+
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import uuid4

@@ -1,3 +1,9 @@
+# Programmer Name: Rakhmatullayeva Amina
+# Program Name: FoodTrack
+# Description: OpenFoodFacts API client for fetching product data by barcode.
+# First Written on: Wednesday, 03-Jun-2026
+# Edited on: Monday, 13-Jul-2026
+
 import httpx
 from src.core.retry import retry_async
 

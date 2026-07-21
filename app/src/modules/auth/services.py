@@ -1,3 +1,9 @@
+# Programmer Name: Rakhmatullayeva Amina
+# Program Name: FoodTrack
+# Description: Business logic for user registration, login, tokens and profile management.
+# First Written on: Tuesday, 19-May-2026
+# Edited on: Wednesday, 15-Jul-2026
+
 import asyncio
 import logging
 from datetime import UTC, datetime

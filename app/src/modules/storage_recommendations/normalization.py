@@ -1,3 +1,9 @@
+# Programmer Name: Rakhmatullayeva Amina
+# Program Name: FoodTrack
+# Description: Normalizes food product names for storage recommendation lookups.
+# First Written on: Monday, 13-Jul-2026
+# Edited on: Monday, 13-Jul-2026
+
 import re
 import unicodedata
 

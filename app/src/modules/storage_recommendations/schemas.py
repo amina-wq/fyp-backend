@@ -1,3 +1,9 @@
+# Programmer Name: Rakhmatullayeva Amina
+# Program Name: FoodTrack
+# Description: Pydantic request/response schemas for storage recommendations.
+# First Written on: Monday, 13-Jul-2026
+# Edited on: Sunday, 19-Jul-2026
+
 from typing import Annotated
 
 from pydantic import BaseModel, Field

@@ -1,3 +1,9 @@
+# Programmer Name: Rakhmatullayeva Amina
+# Program Name: FoodTrack
+# Description: Spoonacular API client for fetching recipe recommendations.
+# First Written on: Saturday, 27-Jun-2026
+# Edited on: Monday, 13-Jul-2026
+
 import httpx
 from fastapi import HTTPException, status
 from src.core.config import settings

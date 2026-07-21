@@ -1,3 +1,9 @@
+# Programmer Name: Rakhmatullayeva Amina
+# Program Name: FoodTrack
+# Description: Redis-based request rate limiting dependency for FastAPI routes.
+# First Written on: Monday, 20-Jul-2026
+# Edited on: Monday, 20-Jul-2026
+
 from collections.abc import Awaitable, Callable
 
 from fastapi import HTTPException, Request, status

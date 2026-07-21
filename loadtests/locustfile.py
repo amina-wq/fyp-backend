@@ -1,3 +1,9 @@
+# Programmer Name: Rakhmatullayeva Amina
+# Program Name: FoodTrack
+# Description: Locust load test simulating realistic multi-user FoodTrack API usage.
+# First Written on: Wednesday, 15-Jul-2026
+# Edited on: Wednesday, 15-Jul-2026
+
 """Load test simulating realistic FoodTrack usage: many users browsing/managing inventory.
 
 Run against a real running stack (e.g. docker-compose.dev.yaml), never against

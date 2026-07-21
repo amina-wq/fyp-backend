@@ -1,3 +1,9 @@
+# Programmer Name: Rakhmatullayeva Amina
+# Program Name: FoodTrack
+# Description: Tests for user registration and login endpoints.
+# First Written on: Sunday, 12-Jul-2026
+# Edited on: Sunday, 12-Jul-2026
+
 from http import HTTPStatus
 
 from httpx import AsyncClient

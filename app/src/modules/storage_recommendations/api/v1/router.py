@@ -1,3 +1,9 @@
+# Programmer Name: Rakhmatullayeva Amina
+# Program Name: FoodTrack
+# Description: API endpoints for food storage duration recommendations.
+# First Written on: Monday, 13-Jul-2026
+# Edited on: Monday, 13-Jul-2026
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends

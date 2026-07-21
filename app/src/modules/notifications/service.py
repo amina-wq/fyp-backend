@@ -1,3 +1,9 @@
+# Programmer Name: Rakhmatullayeva Amina
+# Program Name: FoodTrack
+# Description: Business logic for processing and sending due expiration notifications.
+# First Written on: Tuesday, 07-Jul-2026
+# Edited on: Wednesday, 15-Jul-2026
+
 import logging
 from datetime import UTC, datetime
 

@@ -1,3 +1,9 @@
+# Programmer Name: Rakhmatullayeva Amina
+# Program Name: FoodTrack
+# Description: API endpoints for recipe recommendations.
+# First Written on: Saturday, 27-Jun-2026
+# Edited on: Saturday, 27-Jun-2026
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Path, status

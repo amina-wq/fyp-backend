@@ -1,3 +1,9 @@
+# Programmer Name: Rakhmatullayeva Amina
+# Program Name: FoodTrack
+# Description: Beanie InventoryItem document model and related enums.
+# First Written on: Tuesday, 19-May-2026
+# Edited on: Saturday, 18-Jul-2026
+
 from datetime import UTC, date, datetime
 from enum import Enum
 from typing import Annotated

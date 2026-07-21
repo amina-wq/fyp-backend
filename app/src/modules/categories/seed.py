@@ -1,3 +1,9 @@
+# Programmer Name: Rakhmatullayeva Amina
+# Program Name: FoodTrack
+# Description: Seeds the database with the default set of food categories.
+# First Written on: Wednesday, 01-Jul-2026
+# Edited on: Wednesday, 01-Jul-2026
+
 from datetime import UTC, datetime
 
 from src.modules.categories.models import FoodCategory

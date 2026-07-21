@@ -1,3 +1,9 @@
+# Programmer Name: Rakhmatullayeva Amina
+# Program Name: FoodTrack
+# Description: Builds scheduled expiration notification entries for inventory items.
+# First Written on: Monday, 13-Jul-2026
+# Edited on: Monday, 13-Jul-2026
+
 from datetime import UTC, date, datetime, timedelta, timezone
 
 from src.modules.inventory.models import ScheduledNotification

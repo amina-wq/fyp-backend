@@ -1,3 +1,9 @@
+# Programmer Name: Rakhmatullayeva Amina
+# Program Name: FoodTrack
+# Description: Business logic for fetching and caching storage duration recommendations.
+# First Written on: Monday, 13-Jul-2026
+# Edited on: Sunday, 19-Jul-2026
+
 import logging
 from collections.abc import Callable
 from datetime import UTC, datetime

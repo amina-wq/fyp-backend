@@ -1,3 +1,9 @@
+# Programmer Name: Rakhmatullayeva Amina
+# Program Name: FoodTrack
+# Description: Locust load test that stress-tests the login endpoint in isolation.
+# First Written on: Wednesday, 15-Jul-2026
+# Edited on: Wednesday, 15-Jul-2026
+
 """Isolated scenario: hammer /auth/login only.
 
 Why a separate file: login is the one endpoint that does CPU-bound Argon2

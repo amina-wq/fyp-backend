@@ -1,3 +1,9 @@
+# Programmer Name: Rakhmatullayeva Amina
+# Program Name: FoodTrack
+# Description: Tests for recipe recommendation endpoints.
+# First Written on: Tuesday, 14-Jul-2026
+# Edited on: Tuesday, 14-Jul-2026
+
 from datetime import datetime, timedelta
 from http import HTTPStatus
 

@@ -1,3 +1,9 @@
+# Programmer Name: Rakhmatullayeva Amina
+# Program Name: FoodTrack
+# Description: API endpoints for managing the user's food inventory.
+# First Written on: Sunday, 07-Jun-2026
+# Edited on: Wednesday, 01-Jul-2026
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, Path, Query, UploadFile, status

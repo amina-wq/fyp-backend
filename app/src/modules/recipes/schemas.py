@@ -1,3 +1,9 @@
+# Programmer Name: Rakhmatullayeva Amina
+# Program Name: FoodTrack
+# Description: Pydantic request/response schemas for recipes.
+# First Written on: Tuesday, 19-May-2026
+# Edited on: Saturday, 27-Jun-2026
+
 from pydantic import BaseModel, Field
 from src.modules.inventory.models import InventoryUnits
 from src.modules.recipes.models import RecipeIngredientAvailability

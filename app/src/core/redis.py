@@ -1,3 +1,9 @@
+# Programmer Name: Rakhmatullayeva Amina
+# Program Name: FoodTrack
+# Description: Shared async Redis client instance.
+# First Written on: Sunday, 12-Jul-2026
+# Edited on: Sunday, 12-Jul-2026
+
 from redis.asyncio import Redis
 from src.core.config import settings
 

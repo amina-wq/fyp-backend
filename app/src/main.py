@@ -1,3 +1,9 @@
+# Programmer Name: Rakhmatullayeva Amina
+# Program Name: FoodTrack
+# Description: FastAPI application entry point and startup/shutdown lifecycle.
+# First Written on: Tuesday, 19-May-2026
+# Edited on: Monday, 20-Jul-2026
+
 import logging
 from contextlib import asynccontextmanager
 

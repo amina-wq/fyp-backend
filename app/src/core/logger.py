@@ -1,3 +1,9 @@
+# Programmer Name: Rakhmatullayeva Amina
+# Program Name: FoodTrack
+# Description: Logging configuration for the application.
+# First Written on: Tuesday, 19-May-2026
+# Edited on: Thursday, 28-May-2026
+
 from logging import config as logging_config
 
 from src.core.config import settings

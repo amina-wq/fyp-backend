@@ -1,3 +1,9 @@
+# Programmer Name: Rakhmatullayeva Amina
+# Program Name: FoodTrack
+# Description: Pydantic request/response schemas for products.
+# First Written on: Tuesday, 19-May-2026
+# Edited on: Wednesday, 03-Jun-2026
+
 from datetime import datetime
 from typing import Annotated
 

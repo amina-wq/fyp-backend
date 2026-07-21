@@ -1,3 +1,9 @@
+# Programmer Name: Rakhmatullayeva Amina
+# Program Name: FoodTrack
+# Description: API endpoints for push notification settings and test notifications.
+# First Written on: Wednesday, 15-Jul-2026
+# Edited on: Wednesday, 15-Jul-2026
+
 import logging
 from typing import Annotated
 

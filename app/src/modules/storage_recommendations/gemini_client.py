@@ -1,3 +1,9 @@
+# Programmer Name: Rakhmatullayeva Amina
+# Program Name: FoodTrack
+# Description: Gemini API client that generates food storage duration recommendations.
+# First Written on: Monday, 13-Jul-2026
+# Edited on: Monday, 20-Jul-2026
+
 import json
 
 from google import genai

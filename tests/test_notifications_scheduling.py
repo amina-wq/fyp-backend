@@ -1,3 +1,9 @@
+# Programmer Name: Rakhmatullayeva Amina
+# Program Name: FoodTrack
+# Description: Tests for building scheduled expiration notifications.
+# First Written on: Tuesday, 14-Jul-2026
+# Edited on: Tuesday, 14-Jul-2026
+
 from datetime import UTC, datetime, timedelta
 
 from src.modules.notifications.scheduling import APP_TIMEZONE, build_scheduled_notifications

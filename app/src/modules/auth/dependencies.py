@@ -1,3 +1,9 @@
+# Programmer Name: Rakhmatullayeva Amina
+# Program Name: FoodTrack
+# Description: FastAPI dependencies for extracting and validating the current authenticated user.
+# First Written on: Tuesday, 26-May-2026
+# Edited on: Sunday, 12-Jul-2026
+
 import logging
 from typing import Any
 

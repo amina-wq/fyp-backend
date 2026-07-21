@@ -1,3 +1,9 @@
+# Programmer Name: Rakhmatullayeva Amina
+# Program Name: FoodTrack
+# Description: Aggregates and mounts all module routers under the /api/v1 prefix.
+# First Written on: Wednesday, 03-Jun-2026
+# Edited on: Monday, 20-Jul-2026
+
 from fastapi import APIRouter, Depends
 from src.core.rate_limiter import rate_limit
 from src.modules.admin.api.v1.categories_router import router as admin_categories_router

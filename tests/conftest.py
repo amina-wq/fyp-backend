@@ -1,3 +1,9 @@
+# Programmer Name: Rakhmatullayeva Amina
+# Program Name: FoodTrack
+# Description: Shared pytest fixtures for API client, test database and authentication setup.
+# First Written on: Sunday, 12-Jul-2026
+# Edited on: Monday, 20-Jul-2026
+
 import os
 import uuid
 from collections.abc import AsyncGenerator, Awaitable, Callable

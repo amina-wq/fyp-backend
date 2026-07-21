@@ -1,3 +1,9 @@
+# Programmer Name: Rakhmatullayeva Amina
+# Program Name: FoodTrack
+# Description: Gemini API client that normalizes raw product names into ingredient names.
+# First Written on: Saturday, 27-Jun-2026
+# Edited on: Monday, 13-Jul-2026
+
 from google import genai
 from google.genai import types
 from src.core.config import settings

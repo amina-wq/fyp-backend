@@ -1,3 +1,9 @@
+# Programmer Name: Rakhmatullayeva Amina
+# Program Name: FoodTrack
+# Description: Redis-backed blacklist for revoked JWT tokens.
+# First Written on: Sunday, 12-Jul-2026
+# Edited on: Sunday, 12-Jul-2026
+
 from datetime import UTC, datetime
 from typing import Any
 

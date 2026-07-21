@@ -1,3 +1,9 @@
+# Programmer Name: Rakhmatullayeva Amina
+# Program Name: FoodTrack
+# Description: Tests for the Redis-based API rate limiting.
+# First Written on: Monday, 20-Jul-2026
+# Edited on: Monday, 20-Jul-2026
+
 from http import HTTPStatus
 
 import pytest

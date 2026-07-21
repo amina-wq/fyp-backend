@@ -1,3 +1,9 @@
+# Programmer Name: Rakhmatullayeva Amina
+# Program Name: FoodTrack
+# Description: Beanie document model caching ingredient name normalization results.
+# First Written on: Saturday, 27-Jun-2026
+# Edited on: Saturday, 27-Jun-2026
+
 from datetime import UTC, datetime
 
 from beanie import Document

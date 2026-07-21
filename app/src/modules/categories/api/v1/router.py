@@ -1,3 +1,9 @@
+# Programmer Name: Rakhmatullayeva Amina
+# Program Name: FoodTrack
+# Description: Public API endpoints for listing food categories.
+# First Written on: Wednesday, 01-Jul-2026
+# Edited on: Wednesday, 01-Jul-2026
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Path

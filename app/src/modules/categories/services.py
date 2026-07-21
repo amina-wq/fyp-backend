@@ -1,3 +1,9 @@
+# Programmer Name: Rakhmatullayeva Amina
+# Program Name: FoodTrack
+# Description: Business logic for creating, updating and managing food categories.
+# First Written on: Wednesday, 01-Jul-2026
+# Edited on: Friday, 17-Jul-2026
+
 import asyncio
 import logging
 import uuid

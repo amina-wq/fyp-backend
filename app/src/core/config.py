@@ -1,3 +1,9 @@
+# Programmer Name: Rakhmatullayeva Amina
+# Program Name: FoodTrack
+# Description: Application settings loaded from environment variables.
+# First Written on: Tuesday, 19-May-2026
+# Edited on: Monday, 20-Jul-2026
+
 from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict

@@ -1,3 +1,9 @@
+# Programmer Name: Rakhmatullayeva Amina
+# Program Name: FoodTrack
+# Description: API endpoints for managing the user's shopping list.
+# First Written on: Tuesday, 23-Jun-2026
+# Edited on: Tuesday, 23-Jun-2026
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Path, Query, status

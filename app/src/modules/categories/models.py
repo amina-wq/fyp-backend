@@ -1,3 +1,9 @@
+# Programmer Name: Rakhmatullayeva Amina
+# Program Name: FoodTrack
+# Description: Beanie FoodCategory document model.
+# First Written on: Wednesday, 01-Jul-2026
+# Edited on: Wednesday, 01-Jul-2026
+
 from datetime import UTC, datetime
 from typing import Annotated
 

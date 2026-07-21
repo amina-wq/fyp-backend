@@ -1,3 +1,9 @@
+# Programmer Name: Rakhmatullayeva Amina
+# Program Name: FoodTrack
+# Description: Business logic for fetching and caching recipe recommendations.
+# First Written on: Tuesday, 19-May-2026
+# Edited on: Monday, 13-Jul-2026
+
 import asyncio
 import re
 from datetime import UTC, datetime

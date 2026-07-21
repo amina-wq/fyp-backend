@@ -1,3 +1,9 @@
+# Programmer Name: Rakhmatullayeva Amina
+# Program Name: FoodTrack
+# Description: Generic async retry helper with exponential backoff.
+# First Written on: Monday, 13-Jul-2026
+# Edited on: Wednesday, 15-Jul-2026
+
 import asyncio
 import logging
 from collections.abc import Awaitable, Callable

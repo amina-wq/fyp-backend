@@ -1,3 +1,9 @@
+# Programmer Name: Rakhmatullayeva Amina
+# Program Name: FoodTrack
+# Description: Tests for storage duration recommendation endpoints.
+# First Written on: Tuesday, 14-Jul-2026
+# Edited on: Sunday, 19-Jul-2026
+
 from datetime import UTC, datetime
 from http import HTTPStatus
 

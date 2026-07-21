@@ -1,3 +1,9 @@
+# Programmer Name: Rakhmatullayeva Amina
+# Program Name: FoodTrack
+# Description: Business logic for adding, updating and tracking inventory items.
+# First Written on: Tuesday, 19-May-2026
+# Edited on: Saturday, 18-Jul-2026
+
 import asyncio
 import logging
 import uuid
